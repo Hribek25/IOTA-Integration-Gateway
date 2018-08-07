@@ -14,6 +14,7 @@ namespace IOTA_Gears
     {
         public static void Main(string[] args)
         {
+            Console.WriteLine("Program/Main executed...");
             BuildWebHost(args).Run();
         }
 

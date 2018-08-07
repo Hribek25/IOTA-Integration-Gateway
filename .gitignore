@@ -2,3 +2,4 @@
 .editorconfig
 IOTA Gears/obj/
 IOTA Gears/bin/
+IOTA Gears/pipeline.sqlite

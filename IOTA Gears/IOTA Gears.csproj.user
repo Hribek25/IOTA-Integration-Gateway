@@ -6,5 +6,6 @@
   <PropertyGroup>
     <ActiveDebugProfile>IOTA_Gears</ActiveDebugProfile>
     <WebStackScaffolding_DependencyDialogWidth>600</WebStackScaffolding_DependencyDialogWidth>
+    <ShowAllFiles>false</ShowAllFiles>
   </PropertyGroup>
 </Project>
