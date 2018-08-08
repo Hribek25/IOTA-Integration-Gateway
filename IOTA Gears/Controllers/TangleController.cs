@@ -25,9 +25,14 @@ namespace IOTA_Gears.Controllers
             _logger = logger;
         }
         //CTOR
-                
-        
+
+
         // GET api/tangle/getnodeinfo
+        /// <summary>
+        /// It provides a basic summary of an IOTA node
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="404">If it fails</response>    
         [HttpGet]
         [CacheTangleResponse(LifeSpan = 300)]
         [Produces("application/javascript")]
