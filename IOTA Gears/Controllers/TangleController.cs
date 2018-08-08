@@ -8,6 +8,7 @@ using Tangle.Net.Repository;
 using IOTA_Gears.Services;
 using Microsoft.Extensions.Logging;
 using IOTA_Gears.ActionFilters;
+using System.Net;
 
 namespace IOTA_Gears.Controllers
 {
@@ -30,14 +31,14 @@ namespace IOTA_Gears.Controllers
         [HttpGet]
         [CacheTangleResponse(LifeSpan = 300)]
         [Produces("application/javascript")]
-        [ProducesResponseType(200)]
-        [ProducesResponseType(404)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.NodeInfo), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetNodeInfo()
         {
             Tangle.Net.Repository.DataTransfer.NodeInfo res;
             try
             {
-                res = await _repository.Api.GetNodeInfoAsync();                
+                res = await _repository.Api.GetNodeInfoAsync();
             }
             catch (Exception)
             {
