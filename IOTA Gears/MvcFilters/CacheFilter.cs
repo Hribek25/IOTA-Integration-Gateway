@@ -37,7 +37,7 @@ namespace IOTA_Gears.ActionFilters
                 // do something before
                 // TODO: reading from cache
                 Console.WriteLine($"Cache request call: {context.HttpContext.Request.Path}");
-                var c = DBManager.GetCacheEntry(
+                var c = await DBManager.GetCacheEntryAsync(
                     context.HttpContext.Request.Path,
                     "application/json", //TODO: move this to attribute?
                     CacheLifeSpan
@@ -46,7 +46,7 @@ namespace IOTA_Gears.ActionFilters
                 if (c!=null) // I have a response from cache, let's perform a shortcut
                 {
                     context.Result = c;
-                    var tsk = await Task.FromResult<object>(null); // TODO: Do I need to do this because of async?
+                    //var tsk = await Task.FromResult<object>(null); // TODO: Do I need to do this because of async?
                     return; 
                 }
                 else
@@ -58,7 +58,7 @@ namespace IOTA_Gears.ActionFilters
                         if (!resultContext.Canceled & resultContext.HttpContext.Response.StatusCode == 200 & resultContext.Result is Microsoft.AspNetCore.Mvc.JsonResult)
                         {
                             //only if JSON result and sucessfull call
-                            DBManager.AddCacheEntry(
+                            await DBManager.AddCacheEntryAsync(
                                 context.HttpContext.Request.Path, // request
                                 (Microsoft.AspNetCore.Mvc.JsonResult)resultContext.Result, //result
                                 resultContext.HttpContext.Response.ContentType //content type                                
