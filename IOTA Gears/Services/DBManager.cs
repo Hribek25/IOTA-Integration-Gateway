@@ -157,7 +157,7 @@ CREATE TABLE [cache] (
 
         public void AddCacheEntry(string request, JsonResult result, string contentType)
         {
-            var cmd = "DELETE FROM [cache] WHERE [query]=@query;" + Environment.NewLine; // delete old entries from cache for the given query type
+            var cmd = "DELETE FROM [cache] WHERE [query]=@query and [response_type] like @contenttype;" + Environment.NewLine; // delete old entries from cache for the given query type/content type
             cmd += "INSERT INTO [cache] ([timestamp],[query], [response_type], [response]) VALUES (strftime('%s','now'),@query, @response_type, @response)";
 
             var c = DBConnection.CreateCommand();
