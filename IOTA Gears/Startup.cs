@@ -74,8 +74,8 @@ namespace IOTA_Gears
                         Description = "Integrate IOTA protocol with integration platforms such as ifttt.com or Office 365 to enable use cases based on workflows that are available today",
                         Contact = new Contact
                         {
-                            Name = "Petr Zizka",
-                            Email = "petr@zizkovi.name",
+                            Name = "GitHub Repo",
+                            Email = string.Empty,
                             Url = "https://github.com/Hribek25/IOTA.Gears"
                         }
                     });

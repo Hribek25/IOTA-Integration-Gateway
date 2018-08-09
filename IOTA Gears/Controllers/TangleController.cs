@@ -12,7 +12,8 @@ using System.Net;
 
 namespace IOTA_Gears.Controllers
 {
-    [Route("api/[controller]/[action]")]
+    //[Route("api/[controller]/[action]")]
+    [Route("api/[controller]")]
     public class TangleController : Controller
     {
         private readonly TangleRepository _repository;
@@ -33,8 +34,11 @@ namespace IOTA_Gears.Controllers
         /// </summary>
         /// <returns></returns>
         /// <response code="404">If it fails</response>    
-        [HttpGet]
-        [CacheTangleResponse(LifeSpan = 300)]
+        [HttpGet("node/[action]")]
+        [CacheTangleResponse(
+            LifeSpan = 300,
+            StatusCode = (int)HttpStatusCode.OK)
+            ]
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.NodeInfo), (int)HttpStatusCode.OK)]
@@ -50,6 +54,17 @@ namespace IOTA_Gears.Controllers
                 return new NotFoundResult() ;
             }            
             return Json(res); // Format the output
-        }                 
+        }
+
+        // GET api/tangle/address/transactions
+        //[HttpGet("address/{address}/transactions")]
+        //public async Task<IActionResult> Transactions (string address)
+        //{
+
+        //}
+
+
+
+
     }
 }

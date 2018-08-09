@@ -40,7 +40,7 @@ namespace IOTA_Gears.Services
         
         public class ApiTasks
         {
-            private RestIotaRepository _repo { get; set; }
+            public RestIotaRepository _repo { get; set; }
 
             public ApiTasks(RestIotaRepository repo)
             {
@@ -60,6 +60,8 @@ namespace IOTA_Gears.Services
                 }
                 return res;
             }
+
+
         }              
 
     }

@@ -19,7 +19,7 @@
     "IOTA_Gears": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "api/tangle/getnodeinfo",
+      "launchUrl": "api/tangle/node/getnodeinfo",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
