@@ -39,10 +39,13 @@ namespace IOTA_Gears.ActionFilters
             public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
             {
                 // do something before
+                // Read response from cache
+                var callerID = $"[{context.HttpContext.Request.Method}]{context.HttpContext.Request.Path}";
+
                 Logger.LogInformation("Cache request query: {context.HttpContext.Request.Path}", context.HttpContext.Request.Path);
                 var c = await DBManager.GetCacheEntryAsync(
-                    context.HttpContext.Request.Path,
-                    "application/json", //TODO: move this to attribute?
+                    callerID,
+                    "application/json", // TODO: move this to attribute?
                     CacheLifeSpan
                     );
 
@@ -63,8 +66,9 @@ namespace IOTA_Gears.ActionFilters
                         if (!resultContext.Canceled && resultContext.HttpContext.Response.StatusCode == StatusCode && resultContext.Result is Microsoft.AspNetCore.Mvc.JsonResult)
                         {
                             //only if JSON result and sucessfull call
+                            // Write response to cache
                             await DBManager.AddCacheEntryAsync(
-                                context.HttpContext.Request.Path, // request
+                                callerID, // request
                                 (Microsoft.AspNetCore.Mvc.JsonResult)resultContext.Result, //result
                                 resultContext.HttpContext.Response.ContentType //content type                                
                                 );
