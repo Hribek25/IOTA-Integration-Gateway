@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using RestSharp;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Tangle.Net.Repository;
@@ -19,15 +20,18 @@ namespace IOTA_Gears.Services
     {
         public ApiTasks Api { get; }
         private NodeManager NodeManager { get;  }
+        private DBManager DB { get; }
         private ILogger<TangleRepository> Logger { get;  } 
         
-        public TangleRepository(NodeManager nodemanager, ILogger<TangleRepository> logger) {
+        public TangleRepository(NodeManager nodemanager, ILogger<TangleRepository> logger, DBManager dbmanager) {
             NodeManager = nodemanager;
             Logger = logger;
+            DB = dbmanager;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
             Api = new ApiTasks(
-                InitRestClient(node)
+                InitRestClient(node),
+                dbmanager
                 );
         }
         
@@ -40,11 +44,13 @@ namespace IOTA_Gears.Services
         
         public class ApiTasks
         {
-            public RestIotaRepository _repo { get; set; }
+            public RestIotaRepository _repo { get; }
+            public DBManager _DB { get; }
 
-            public ApiTasks(RestIotaRepository repo)
+            public ApiTasks(RestIotaRepository repo, DBManager db)
             {
                 _repo = repo;
+                _DB = db;
             }
 
             public async Task<NodeInfo> GetNodeInfoAsync()
@@ -61,8 +67,70 @@ namespace IOTA_Gears.Services
                 return res;
             }
 
+            public async Task<TransactionHashList> GetTransactionsByAddress(string address)
+            {
+                // get a list of transactions to the given address
+                var callerID = $"FindTransactionsByAddress::{address}";
 
-        }              
+                // Get from a partial cache
+                var cached = await _DB.GetPartialCacheEntriesAsync(call: callerID);
+                var CachedInput = cached.Item1;
+                var CachedOutput = (IList)cached.Item2;
+
+                // Get info from node
+                TransactionHashList res;
+                try
+                {
+                    res = await _repo.FindTransactionsByAddressesAsync( new List<Tangle.Net.Entity.Address>() { new Tangle.Net.Entity.Address(address) } );
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                
+                //Write to partial cache
+                await _DB.AddPartialCacheEntriesAsync(
+                    call: callerID,
+                    input: address,
+                    results: from i in res.Hashes where !CachedOutput.Contains(i.Value) select i.Value); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
+
+                return res;
+            }
+
+
+            public async Task<AddressWithBalances> GetBalanceByAddress(string address)
+            {
+                // get a list of transactions to the given address
+                var callerID = $"GetBalanceByAddress::{address}";
+
+                // Get from a partial cache
+                var cached = await _DB.GetPartialCacheEntryAsync(call: callerID);
+                var CachedInput = cached.Item1;
+                var CachedOutput = (AddressWithBalances)cached.Item2;
+
+                // Get info from node
+                AddressWithBalances res;
+                try
+                {
+                    res = await _repo.GetBalancesAsync(new List<Tangle.Net.Entity.Address>() { new Tangle.Net.Entity.Address(address) });
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+
+                if (CachedOutput==null || CachedOutput.Addresses[0].Balance!=res.Addresses[0].Balance) //balance has changed - additing new one with a new timestamp
+                {
+                    //Write to partial cache
+                    await _DB.AddPartialCacheEntryAsync(
+                        call: callerID,
+                        input: address,
+                        result: res); // Let's store actual balance
+                }                               
+
+                return res;
+            }
+        }       
 
     }
 
