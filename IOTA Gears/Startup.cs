@@ -41,27 +41,32 @@ namespace IOTA_Gears
                                      );
             services.AddSingleton<INodeManager>(nm);
 
-            // Tangle Repo
-            // this is not a singleton in order to change public nodes per each request
-            services.AddTransient<ITangleRepository>(
-                s => new TangleRepository(
-                    nm,
-                    LoggerFactory.CreateLogger<TangleRepository>()
-                    )
-                );  // incl reference to node manager
             
             // DB Manager
             // singleton
             var dbcon = new SqliteConnection(
                 new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource()}.ConnectionString
                 );
-
-            services.AddSingleton<IDBManager>(
-                new DBManager(
+            
+            DBManager dbman = new DBManager(
                     dbcon,
                     LoggerFactory.CreateLogger<DBManager>()
-                    )
+                    );
+
+            services.AddSingleton<IDBManager>(
+                dbman
                 );
+
+
+            // Tangle Repo
+            // this is not a singleton in order to change public nodes per each request
+            services.AddTransient<ITangleRepository>(
+                s => new TangleRepository(
+                    nm,
+                    LoggerFactory.CreateLogger<TangleRepository>(),
+                    dbman
+                    )
+                );  // incl reference to node manager
 
             // Register the Swagger generator
             services.AddSwaggerGen(c =>
