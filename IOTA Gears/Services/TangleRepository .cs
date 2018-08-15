@@ -101,13 +101,12 @@ namespace IOTA_Gears.Services
 
             public async Task<List<Transaction>> GetDetailedTransactionsByAddress(string address)
             {
-                // get a list of transactions to the given address
                 var callerID = $"FindTransactionsByAddress.Details::{address}";
-
-                // Get list of transactions
+                                
                 TransactionHashList trnList;
                 try
                 {
+                    // Get list of transactions - local API call
                     trnList = await this.GetTransactionsByAddress(address);
                 }
                 catch (Exception)
@@ -116,6 +115,7 @@ namespace IOTA_Gears.Services
                 }
 
                 // getting details
+                // TODO: reading from partial cache - to speed up the second call
 
                 List<Transaction> resTransactions = new List<Transaction>();
                 List<TransactionTrytes> trnTrytes;
@@ -131,10 +131,8 @@ namespace IOTA_Gears.Services
 
                         throw;
                     }
-
                     resTransactions.AddRange(from i in trnTrytes select Transaction.FromTrytes(i)); // converting to transaction object and adding to collection
-                }               
-
+                }             
                 return resTransactions;
             }
 

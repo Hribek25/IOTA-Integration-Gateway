@@ -28,6 +28,9 @@ namespace IOTA_Gears.Controllers
         //CTOR
 
 
+
+
+
         // GET api/tangle/getnodeinfo
         /// <summary>
         /// Basic summary of an IOTA node and its status. It calls core IOTA API call: getNodeInfo()
@@ -56,6 +59,8 @@ namespace IOTA_Gears.Controllers
             return Json(res); // Format the output
         }
 
+        
+        
         // GET api/tangle/address/transactions
         /// <summary>
         /// All transaction hashes related to the given IOTA address. It calls core IOTA API call: findTransactions()
@@ -72,7 +77,7 @@ namespace IOTA_Gears.Controllers
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.TransactionHashList), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> Transactions(string address)
         {
-            Tangle.Net.Repository.DataTransfer.TransactionHashList res;           
+            Tangle.Net.Repository.DataTransfer.TransactionHashList res;
                         
             try
             {
@@ -96,29 +101,40 @@ namespace IOTA_Gears.Controllers
             //}
             
         }
+
         
+
+
+        // GET api/tangle/address/transactions/details
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/transactions/details")]
+        [CacheTangleResponse(
+            LifeSpan = 300,
+            StatusCode = (int)HttpStatusCode.OK)
+            ]
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(List<Tangle.Net.Entity.Transaction>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> TransactionsDetails(string address)
         {
-            List<Tangle.Net.Entity.Transaction> res;
-            
+            List<Tangle.Net.Entity.Transaction> res;            
             try
             {
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
-
-
             }
             catch (Exception)
             {
                 return new NotFoundResult();
             }
 
-            return Json(res);                    
+            var sorted = (from i in res orderby i.Timestamp descending select i).ToList();
+            return Json(sorted);                    
         }
+
+
+
+
         
+        // GET api/tangle/address/balance
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/balance")]
         [CacheTangleResponse(
             LifeSpan = 300,
