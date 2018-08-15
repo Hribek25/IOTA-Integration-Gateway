@@ -30,7 +30,7 @@ namespace IOTA_Gears.Controllers
 
         // GET api/tangle/getnodeinfo
         /// <summary>
-        /// It provides a basic summary of an IOTA node and its status. It includes core IOTA API call: getNodeInfo()
+        /// Basic summary of an IOTA node and its status. It calls core IOTA API call: getNodeInfo()
         /// </summary>
         /// <returns></returns>
         /// <response code="404">Failure</response>    
@@ -58,17 +58,21 @@ namespace IOTA_Gears.Controllers
 
         // GET api/tangle/address/transactions
         /// <summary>
-        /// It provides all transaction hashes related to the given IOTA address. It includes core IOTA API call: findTransactions()
+        /// All transaction hashes related to the given IOTA address. It calls core IOTA API call: findTransactions()
         /// </summary>
         /// <returns></returns>
         /// <response code="404">Failure</response>    
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/transactions")]
+        [CacheTangleResponse(
+            LifeSpan = 300,
+            StatusCode = (int)HttpStatusCode.OK)
+            ]
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.TransactionHashList), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> Transactions(string address)
         {
-            Tangle.Net.Repository.DataTransfer.TransactionHashList res;
+            Tangle.Net.Repository.DataTransfer.TransactionHashList res;           
                         
             try
             {
@@ -93,7 +97,33 @@ namespace IOTA_Gears.Controllers
             
         }
         
+        [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/transactions/details")]
+        [Produces("application/javascript")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(List<Tangle.Net.Entity.Transaction>), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> TransactionsDetails(string address)
+        {
+            List<Tangle.Net.Entity.Transaction> res;
+            
+            try
+            {
+                res = await _repository.Api.GetDetailedTransactionsByAddress(address);
+
+
+            }
+            catch (Exception)
+            {
+                return new NotFoundResult();
+            }
+
+            return Json(res);                    
+        }
+        
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/balance")]
+        [CacheTangleResponse(
+            LifeSpan = 300,
+            StatusCode = (int)HttpStatusCode.OK)
+            ]
         [Produces("application/javascript")]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.AddressWithBalances), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]        

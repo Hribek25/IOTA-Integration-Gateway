@@ -8,6 +8,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Tangle.Net.Repository;
 using Tangle.Net.Repository.DataTransfer;
+using Tangle.Net.Entity;
+
 
 namespace IOTA_Gears.Services
 {
@@ -97,6 +99,45 @@ namespace IOTA_Gears.Services
                 return res;
             }
 
+            public async Task<List<Transaction>> GetDetailedTransactionsByAddress(string address)
+            {
+                // get a list of transactions to the given address
+                var callerID = $"FindTransactionsByAddress.Details::{address}";
+
+                // Get list of transactions
+                TransactionHashList trnList;
+                try
+                {
+                    trnList = await this.GetTransactionsByAddress(address);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+
+                // getting details
+
+                List<Transaction> resTransactions = new List<Transaction>();
+                List<TransactionTrytes> trnTrytes;
+                
+                if (trnList.Hashes.Count > 0)
+                {
+                    try
+                    {
+                        trnTrytes = await _repo.GetTrytesAsync(trnList.Hashes);
+                    }
+                    catch (Exception)
+                    {
+
+                        throw;
+                    }
+
+                    resTransactions.AddRange(from i in trnTrytes select Transaction.FromTrytes(i)); // converting to transaction object and adding to collection
+                }               
+
+                return resTransactions;
+            }
+
 
             public async Task<AddressWithBalances> GetBalanceByAddress(string address)
             {
@@ -119,13 +160,13 @@ namespace IOTA_Gears.Services
                     throw;
                 }
 
-                if (CachedOutput==null || CachedOutput.Addresses[0].Balance!=res.Addresses[0].Balance) //balance has changed - additing new one with a new timestamp
+                if (CachedOutput==null || CachedOutput.Addresses[0].Balance!=res.Addresses[0].Balance) // balance has been changed - adding new one with a new timestamp
                 {
                     //Write to partial cache
                     await _DB.AddPartialCacheEntryAsync(
                         call: callerID,
                         input: address,
-                        result: res); // Let's store actual balance
+                        result: res); // Let's add actual balance
                 }                               
 
                 return res;
