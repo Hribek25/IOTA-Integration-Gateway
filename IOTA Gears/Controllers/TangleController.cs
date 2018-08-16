@@ -102,10 +102,16 @@ namespace IOTA_Gears.Controllers
             
         }
 
-        
+
 
 
         // GET api/tangle/address/transactions/details
+        /// <summary>
+        /// All transactions including all details related to the given IOTA address. It calls core IOTA API calls: findTransactions() + getTrytes()
+        /// Transactions are sorted in a descending order by default
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="404">Failure</response>    
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/transactions/details")]
         [CacheTangleResponse(
             LifeSpan = 300,
@@ -133,8 +139,13 @@ namespace IOTA_Gears.Controllers
 
 
 
-        
+
         // GET api/tangle/address/balance
+        /// <summary>
+        /// Confirmed balance of the given IOTA address based on the latest confirmed milestone. It calls core IOTA API call: getBalances()
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="404">Failure</response>    
         [HttpGet("address/{address:regex(^(([[A-Z9]]{{90}})|([[A-Z9]]{{81}}))$)}/balance")]
         [CacheTangleResponse(
             LifeSpan = 300,
@@ -142,7 +153,7 @@ namespace IOTA_Gears.Controllers
             ]
         [Produces("application/javascript")]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.AddressWithBalances), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]        
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Balance(string address)
         {
             Tangle.Net.Repository.DataTransfer.AddressWithBalances res;
