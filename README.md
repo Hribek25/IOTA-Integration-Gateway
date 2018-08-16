@@ -10,6 +10,9 @@ Integration platforms such as ifttt.com or O365 (ex. MS Flow) are used in many b
 * Interface to some additional components from Office365 ecosystem such as Power BI, Power Query, etc. - to be considered
 * Interface to some other business-related apps and platforms - to be considered
 
+## Architecture
+![Architecture](https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/architecture_layers.png)
+
 ## About
 The project is developed and maintained by Petr Zizka (petr@zizkovi.name).
 
