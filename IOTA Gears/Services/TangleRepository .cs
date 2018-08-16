@@ -96,17 +96,18 @@ namespace IOTA_Gears.Services
                     input: address,
                     results: from i in res.Hashes where !CachedOutput.Contains(i.Value) select i.Value); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
 
+                // TODO: Consider whether to return everything in cache - there may be more entries because of permanodes
                 return res;
             }
 
             public async Task<List<Transaction>> GetDetailedTransactionsByAddress(string address)
             {
                 var callerID = $"FindTransactionsByAddress.Details::{address}";
-                                
+
                 TransactionHashList trnList;
                 try
                 {
-                    // Get list of transactions - local API call
+                    // Get list of all transactions - local API call
                     trnList = await this.GetTransactionsByAddress(address);
                 }
                 catch (Exception)
@@ -115,23 +116,41 @@ namespace IOTA_Gears.Services
                 }
 
                 // getting details
-                // TODO: reading from partial cache - to speed up the second call
 
-                List<Transaction> resTransactions = new List<Transaction>();
+                // Getting from a partial cache to speed up the second call
+                var cached = await _DB.GetPartialCacheEntriesAsync(call: callerID);
+                var CachedInput = (List<Hash>)cached.Item1 ?? new List<Hash>(); // list of transaction hashes
+                var CachedOutput = (IList)cached.Item2; // list of transactions
+
+                // list of transaction hashes that are new (not in the cache)
+                var hashesToGet = trnList.Hashes.Except(CachedInput, (a, b) => a.Value==b.Value).ToList();
+                
+                List < Transaction > resTransactions = new List<Transaction>();
                 List<TransactionTrytes> trnTrytes;
                 
                 if (trnList.Hashes.Count > 0)
                 {
-                    try
+                    if (hashesToGet.Count>0) // any new transactions to get info about?
                     {
-                        trnTrytes = await _repo.GetTrytesAsync(trnList.Hashes);
+                        try
+                        {
+                            trnTrytes = await _repo.GetTrytesAsync(hashesToGet);
+                        }
+                        catch (Exception)
+                        {
+                            throw;
+                        }
+                        resTransactions.AddRange(from i in trnTrytes select Transaction.FromTrytes(i)); // converting to transaction object and adding to collection
+                        
+                        //Write to partial cache
+                        await _DB.AddPartialCacheEntriesAsync(
+                            call: callerID,
+                            input: hashesToGet.Concat(CachedInput),  // input should include all transaction hashes that are in the cache - old ones + new ones
+                            results: resTransactions); // Let's store only newly added items to the cache with a new timestamp
                     }
-                    catch (Exception)
-                    {
 
-                        throw;
-                    }
-                    resTransactions.AddRange(from i in trnTrytes select Transaction.FromTrytes(i)); // converting to transaction object and adding to collection
+                    // adding original transations from the cache to the output
+                    resTransactions.AddRange(CachedOutput.Cast<Transaction>());
                 }             
                 return resTransactions;
             }
