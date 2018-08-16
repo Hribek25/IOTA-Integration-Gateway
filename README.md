@@ -4,10 +4,11 @@ I believe it is a vital to integrate IOTA protocol with business-related workflo
 Integration platforms such as ifttt.com or O365 (ex. MS Flow) are used in many business-related use cases everyday and triggers/actions based on IOTA protocol would be very good addition to them. Needless to say, it will enable wide range of additional use cases based on thousands of  third-party components that are solid part of the integration platforms today. It may also serve as a gateway to business analytics tools such as Power BI, Power Query, etc.
 
 **The project roadmap:**
-* Project infrastructure  - smart caching, controllers, etc.  - currently under the development
+* Project infrastructure  - smart caching, controllers, etc. : DONE
+* Standard set of APIs to be able to directly interact with IOTA Tangle network - currently under the development
 * Working interface to IFTTT platform - currently under the development
 * Interface to MS Flow platform - planned
-* Interface to some additional components from Office365 ecosystem such as Power BI, Power Query, etc. - to be considered
+* Interface to some additional components from Office365 ecosystem such as Power BI, Power Query, etc. - planned
 * Interface to some other business-related apps and platforms - to be considered
 
 ## Architecture
