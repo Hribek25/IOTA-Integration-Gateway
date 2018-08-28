@@ -19,13 +19,8 @@ namespace IOTA_Gears
 
         public LambdaComparer(Func<T, T, bool> lambdaComparer, Func<T, int> lambdaHash)
         {
-            if (lambdaComparer == null)
-                throw new ArgumentNullException("lambdaComparer");
-            if (lambdaHash == null)
-                throw new ArgumentNullException("lambdaHash");
-
-            _lambdaComparer = lambdaComparer;
-            _lambdaHash = lambdaHash;
+            _lambdaComparer = lambdaComparer ?? throw new ArgumentNullException("lambdaComparer");
+            _lambdaHash = lambdaHash ?? throw new ArgumentNullException("lambdaHash");
         }
 
         public bool Equals(T x, T y)
