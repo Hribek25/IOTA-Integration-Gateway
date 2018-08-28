@@ -39,10 +39,12 @@ namespace IOTA_Gears.Services
                 {
                     reader.Read(); // take the first one whatever it is
                     var jsdata = (string)reader["response"];
-                    cacheEntry = new JsonResult(DBSerializer.DeserializeFromJson(jsdata));
+                    var tmp = DBSerializer.DeserializeFromJson(jsdata);
+                    cacheEntry = new JsonResult(tmp);
                 }
             }
             DBConnection.Close();
+            
             return cacheEntry;
         }
         public async Task AddCacheEntryAsync(string request, JsonResult result, string contentType)
@@ -60,7 +62,8 @@ namespace IOTA_Gears.Services
             var inputcmd = _AddPartialCacheInputEntrySQL(call, input);
 
             DBConnection.Open();
-            
+
+            var cnt = 0;
             using (var tr = DBConnection.BeginTransaction())
             {
                 inputcmd.Transaction = tr;
@@ -70,10 +73,12 @@ namespace IOTA_Gears.Services
                 {
                     i.Transaction = tr;
                     await i.ExecuteNonQueryAsync();
+                    cnt += 1;
                 }
                 tr.Commit();
             }            
             DBConnection.Close();
+            Logger.LogInformation("Partial cache used (ADD) for multiple elements. {cnt} records were saved for the caller {call}.", cnt, call);
         }
         public async Task AddPartialCacheEntryAsync(string call, object input, object result)
         {
@@ -91,9 +96,10 @@ namespace IOTA_Gears.Services
             }           
             
             DBConnection.Close();
+            Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call);
         }
 
-        public async Task<Tuple<object, IEnumerable<object>>> GetPartialCacheEntriesAsync(string call)
+        public async Task<Tuple<object, List<object>>> GetPartialCacheEntriesAsync(string call)
         {
             var inputcmd = _GetPartialCacheInputEntrySQL(call);
             var outputcmd = _GetPartialCacheOutputEntrySQL(call);
@@ -111,8 +117,9 @@ namespace IOTA_Gears.Services
                 }
             }
 
-            
             var result = new List<object>();
+            
+            // var result = new List<object>();
 
             using (var reader = await outputcmd.ExecuteReaderAsync())
             {
@@ -129,7 +136,9 @@ namespace IOTA_Gears.Services
 
             DBConnection.Close();
 
-            return new Tuple<object, IEnumerable<object>>(InputCacheEntry, result);
+            Logger.LogInformation("Partial cache used (GET) for multiple elements. {result.Count} records were loaded for the caller {call}.", result.Count, call);
+
+            return new Tuple<object, List<object>>(InputCacheEntry, result.Count==0 ? null : result);
         }
         public async Task<Tuple<object, object>> GetPartialCacheEntryAsync(string call)
         {
@@ -161,6 +170,8 @@ namespace IOTA_Gears.Services
             }
             
             DBConnection.Close();
+
+            Logger.LogInformation("Partial cache used (GET) for individual element. {OutputCacheEntry?.GetType()} was loaded for the caller: {call}.", OutputCacheEntry?.GetType(), call);
 
             return new Tuple<object, object>(InputCacheEntry, OutputCacheEntry);
         }
