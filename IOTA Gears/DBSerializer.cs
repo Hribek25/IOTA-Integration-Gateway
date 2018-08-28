@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Tangle.Net.Entity;
 
 namespace IOTA_Gears
@@ -13,12 +15,13 @@ namespace IOTA_Gears
 
     class TangleAddressConverter : JsonConverter
     {
+
         public override bool CanConvert(Type objectType)
         {
-            return (objectType == typeof(Tangle.Net.Entity.Address));
+            return objectType == typeof(Address);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
@@ -49,6 +52,11 @@ namespace IOTA_Gears
             get { return false; }
         }
 
+        public override bool CanRead
+        {
+            get { return true; }
+        }
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotImplementedException();
@@ -58,7 +66,7 @@ namespace IOTA_Gears
     {
         public override bool CanConvert(Type objectType)
         {
-            return (objectType == typeof(Tangle.Net.Entity.TryteString));
+            return objectType == typeof(TryteString);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -83,6 +91,11 @@ namespace IOTA_Gears
             get { return false; }
         }
 
+        public override bool CanRead
+        {
+            get { return true; }
+        }
+
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotImplementedException();
@@ -92,23 +105,22 @@ namespace IOTA_Gears
     {
         public override bool CanConvert(Type objectType)
         {
-            return (objectType == typeof(Tangle.Net.Entity.Hash));
+            return (objectType == typeof(Hash));
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
 
             // Read the properties which will be used as constructor parameters
             string value = (string)jo["Value"];
-
+            
             // Construct the Result object using the non-default constructor
             Hash result = new Hash(value);
 
             // (If anything else needs to be populated on the result object, do that here)
-
-            // Return the result
+                        
             return result;
         }
 
@@ -117,6 +129,11 @@ namespace IOTA_Gears
             get { return false; }
         }
 
+        public override bool CanRead
+        {
+            get { return true; }
+        }
+        
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotImplementedException();
@@ -126,7 +143,7 @@ namespace IOTA_Gears
     {
         public override bool CanConvert(Type objectType)
         {
-            return (objectType == typeof(Tangle.Net.Entity.Fragment));
+            return objectType == typeof(Fragment);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -151,6 +168,11 @@ namespace IOTA_Gears
             get { return false; }
         }
 
+        public override bool CanRead
+        {
+            get { return true; }
+        }
+                
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotImplementedException();
@@ -160,7 +182,7 @@ namespace IOTA_Gears
     {
         public override bool CanConvert(Type objectType)
         {
-            return (objectType == typeof(Tangle.Net.Entity.Tag));
+            return objectType == typeof(Tag);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -185,59 +207,30 @@ namespace IOTA_Gears
             get { return false; }
         }
 
+        public override bool CanRead
+        {
+            get { return true; }
+        }
+      
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
     }
-
-
-    //class TangleTransactionConverter : JsonConverter
-    //{
-    //    public override bool CanConvert(Type objectType)
-    //    {
-    //        return (objectType == typeof(Tangle.Net.Entity.Transaction));
-    //    }
-
-    //    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-    //    {
-    //        // Load the JSON for the Result into a JObject
-
-    //        if (reader.TokenType == JsonToken.String)
-    //        {
-    //            // Read the properties which will be used as constructor parameters
-    //            var value = (string)reader.Value;
-
-    //            // Construct the Result object using the non-default constructor
-    //            var result = Transaction.FromTrytes(new TransactionTrytes(value));
-
-    //            // (If anything else needs to be populated on the result object, do that here)
-    //            // Return the result
-    //            return result;
-    //        }
-
-    //        return null;            
-    //    }
-
-    //    public override bool CanWrite
-    //    {
-    //        get { return true; }
-    //    }
-
-    //    public override bool CanRead
-    //    {
-    //        get { return true; }
-    //    }
-
-    //    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    //    {
-    //        var o = (Transaction)value;
-
-    //        // Transactions are serialized as Trytes
-    //        var jt = new JValue(o.ToTrytes().Value);
-    //        jt.WriteTo(writer);
-    //    }
-    //}
+    class CustomResolver : DefaultContractResolver
+    {
+        protected override JsonObjectContract CreateObjectContract(Type objectType)
+        {
+            var contract = base.CreateObjectContract(objectType);
+            if (objectType == typeof(Hash))
+            {
+                contract.CreatorParameters.Add(contract.Properties["Value"]);
+                contract.OverrideCreator = (object[] a) =>
+                                                new Hash((string)a[0]);
+            }
+            return contract;
+        }
+    }
 
     #endregion
 
@@ -250,8 +243,7 @@ namespace IOTA_Gears
                 PreserveReferencesHandling = PreserveReferencesHandling.All,
                 TypeNameHandling = TypeNameHandling.All
             };
-                       
-
+            
             string res;
             res = JsonConvert.SerializeObject(
                 input,
@@ -275,9 +267,10 @@ namespace IOTA_Gears
             settings.Converters.Add(new TangleHashConverter());
             settings.Converters.Add(new TangleFragmentConverter());
             settings.Converters.Add(new TangleTagConverter());
-            
-            var res =  JsonConvert.DeserializeObject( input, settings );
+            settings.ContractResolver = new CustomResolver();
 
+            var res = JsonConvert.DeserializeObject(input, settings);
+            
             return res;
         }
     }
