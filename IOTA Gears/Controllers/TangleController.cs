@@ -98,16 +98,7 @@ namespace IOTA_Gears.Controllers
                 return NotFound(); // return 404 error                
             }
 
-            return Json(res);
-
-            //IEnumerable<Tangle.Net.Entity.Bundle> bundles = null;
-            //if (res.Hashes.Count > 0)
-            //{
-            //    bundles = await _repository.Api._repo.GetBundlesAsync(
-            //        transactionHashes: (from i in res.Hashes
-            //        select i).ToList(),
-            //        includeInclusionStates: false);
-            //}
+            return Json(res);                       
             
         }
 
@@ -129,7 +120,7 @@ namespace IOTA_Gears.Controllers
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType(typeof(List<Tangle.Net.Entity.Transaction>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(List<EntityModels.TransactionContainer>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> TransactionsDetails(string address)
         {
             if (!CommonHelpers.IsValidAddress(address))
@@ -137,7 +128,7 @@ namespace IOTA_Gears.Controllers
                 return BadRequest(); //return 400 error
             }
             
-            List<Tangle.Net.Entity.Transaction> res;            
+            List<EntityModels.TransactionContainer> res;
             try
             {
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
@@ -148,9 +139,21 @@ namespace IOTA_Gears.Controllers
                 return NotFound(); //returns 404
             }
 
-            var sorted = (from i in res orderby i.Timestamp descending select i).ToList();
+            var sorted = (from i in res orderby i.Transaction.Timestamp descending select i).ToList();
             return Json(sorted);                    
         }
+        
+        //[HttpGet("address/{address}/transactions/confirmations")]        
+        //[Produces("application/javascript")]
+        //public async Task<IActionResult> TransactionConfirmations(string address)
+        //{
+        //    TransactionHashList res;
+        //    res = await _repository.Api.GetTransactionsByAddress(address);
+
+        //    var Inclusions = await _repository.Api.GetLatestInclusionStates(res.Hashes);
+            
+        //    return Json(Inclusions);
+        //}
 
 
 
