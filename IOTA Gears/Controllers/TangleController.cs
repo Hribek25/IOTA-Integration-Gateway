@@ -8,6 +8,7 @@ using IOTA_Gears.Services;
 using Microsoft.Extensions.Logging;
 using IOTA_Gears.ActionFilters;
 using System.Net;
+using IOTA_Gears.EntityModels;
 
 namespace IOTA_Gears.Controllers
 {
@@ -35,14 +36,14 @@ namespace IOTA_Gears.Controllers
         /// Basic summary of an IOTA node and its status. It calls core IOTA API call: getNodeInfo()
         /// </summary>
         /// <returns></returns>
-        /// <response code="404">Result is not available at the moment</response>    
+        /// <response code="504">Result is not available at the moment</response>    
         [HttpGet("node/[action]")]
         [CacheTangleResponse(
             LifeSpan = 300,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.NodeInfo), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetNodeInfo()
         {
@@ -55,7 +56,7 @@ namespace IOTA_Gears.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "Error occured");
-                return NotFound() ; // return 404 error
+                return StatusCode(504); // return 404 error
             }            
             return Json(res); // Format the output
         }
@@ -68,14 +69,14 @@ namespace IOTA_Gears.Controllers
         /// </summary>
         /// <returns></returns>
         /// <response code="400">Incorect format of the address</response>
-        /// <response code="404">Result is not available at the moment</response>
+        /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions")]
         [CacheTangleResponse(
             LifeSpan = 300,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.TransactionHashList), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> Transactions(string address)
@@ -95,7 +96,7 @@ namespace IOTA_Gears.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "Error occured in Transactions controller");
-                return NotFound(); // return 404 error                
+                return StatusCode(504); // return 404 error                
             }
 
             return Json(res);                       
@@ -107,22 +108,27 @@ namespace IOTA_Gears.Controllers
 
         // GET api/tangle/address/transactions/details
         /// <summary>
-        /// All transactions including all details related to the given IOTA address. It calls core IOTA API calls: findTransactions() + getTrytes()
+        /// All transactions including all details related to the given IOTA address. It calls core IOTA API calls: findTransactions() + getTrytes() + getLatestInclusionStates()
         /// </summary>
         /// <returns>Transactions sorted in a descending order.</returns>
+        /// <param name="filter">ConfirmedOnly / All</param>
         /// <response code="400">Incorect format of the address</response>
-        /// <response code="404">Result is not available at the moment</response>
+        /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions/details")]
         [CacheTangleResponse(
             LifeSpan = 300,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(List<EntityModels.TransactionContainer>), (int)HttpStatusCode.OK)]
-        public async Task<IActionResult> TransactionsDetails(string address)
+#pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
+        public async Task<IActionResult> TransactionsDetails(string address, TransactionFilter filter = TransactionFilter.ConfirmedOnly)
+#pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         {
+            //_logger.LogDebug("{filter}", filter);
+
             if (!CommonHelpers.IsValidAddress(address))
             {
                 return BadRequest(); //return 400 error
@@ -136,29 +142,23 @@ namespace IOTA_Gears.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "Error occured in TransactionsDetails controller");
-                return NotFound(); //returns 404
+                return StatusCode(504); //returns 404
             }
 
-            var sorted = (from i in res orderby i.Transaction.Timestamp descending select i).ToList();
+            List<TransactionContainer> sorted;
+            if (filter==TransactionFilter.All)
+            { // all transactions
+                sorted = (from i in res orderby i.Transaction.Timestamp descending select i).ToList();
+            }
+            else
+            { // only confirmed
+                sorted = (from i in res where (bool)i.IsConfirmed orderby i.Transaction.Timestamp descending select i).ToList();
+            }
+            
             return Json(sorted);                    
         }
         
-        //[HttpGet("address/{address}/transactions/confirmations")]        
-        //[Produces("application/javascript")]
-        //public async Task<IActionResult> TransactionConfirmations(string address)
-        //{
-        //    TransactionHashList res;
-        //    res = await _repository.Api.GetTransactionsByAddress(address);
-
-        //    var Inclusions = await _repository.Api.GetLatestInclusionStates(res.Hashes);
-            
-        //    return Json(Inclusions);
-        //}
-
-
-
-
-
+        
         // GET api/tangle/address/balance
         /// <summary>
         /// Confirmed balance of the given IOTA address based on the latest confirmed milestone. It calls core IOTA API call: getBalances()
@@ -173,7 +173,7 @@ namespace IOTA_Gears.Controllers
             ]
         [Produces("application/javascript")]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.AddressWithBalances), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Balance(string address)
         {
@@ -191,8 +191,7 @@ namespace IOTA_Gears.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "Error occured in Balance controller");
-                //return NotFound(); //returns 404
-                throw;
+                return StatusCode(504);
             }
 
             return Json(res);
