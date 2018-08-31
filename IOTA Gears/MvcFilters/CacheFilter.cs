@@ -40,7 +40,7 @@ namespace IOTA_Gears.ActionFilters
             {
                 // do something before
                 // Read response from cache
-                var callerID = $"[{context.HttpContext.Request.Method}]{context.HttpContext.Request.Path}";
+                var callerID = $"[{context.HttpContext.Request.Method}]{context.HttpContext.Request.Path}{context.HttpContext.Request.QueryString}";
 
                 Logger.LogInformation("Cache request query: {context.HttpContext.Request.Path}", context.HttpContext.Request.Path);
                 var c = await DBManager.GetCacheEntryAsync(
