@@ -23,7 +23,8 @@ namespace IOTA_Gears.Services
         public ApiTasks Api { get; }
         private NodeManager NodeManager { get;  }
         private DBManager DB { get; }
-        private ILogger<TangleRepository> Logger { get;  } 
+        private ILogger<TangleRepository> Logger { get;  }
+        private string ActualNodeServer { get; }
         
         public TangleRepository(NodeManager nodemanager, ILogger<TangleRepository> logger, DBManager dbmanager) {
             NodeManager = nodemanager;
@@ -31,6 +32,7 @@ namespace IOTA_Gears.Services
             DB = dbmanager;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
+            ActualNodeServer = node;
             Api = new ApiTasks(
                 InitRestClient(node),
                 this
@@ -49,12 +51,14 @@ namespace IOTA_Gears.Services
             public RestIotaRepository _repo { get; }
             private DBManager _DB { get; }
             private ILogger<TangleRepository> _Logger { get; }
+            private string _ActualNodeServer { get; }
 
             public ApiTasks(RestIotaRepository repo, TangleRepository parent)
             {
                 _repo = repo;
                 _DB = parent.DB;
                 _Logger = parent.Logger;
+                _ActualNodeServer = parent.ActualNodeServer;
             }
 
             public async Task<NodeInfo> GetNodeInfoAsync()
@@ -62,7 +66,9 @@ namespace IOTA_Gears.Services
                 NodeInfo res;
                 try
                 {
+                    _Logger.LogInformation("Performing external API call GetNodeInfo... via node {_ActualNodeServer}", _ActualNodeServer);
                     res = await _repo.GetNodeInfoAsync();
+                    _Logger.LogInformation("External API call... Finished.");
                 }
                 catch (Exception)
                 {
@@ -91,7 +97,9 @@ namespace IOTA_Gears.Services
                 InclusionStates res;
                 try
                 {
+                    _Logger.LogInformation("Performing external API call GetLatestInclusionStates for {OnlyNonConfirmedHashes.Count} hashes... via node {_ActualNodeServer}", OnlyNonConfirmedHashes.Count, _ActualNodeServer);
                     res = await _repo.GetLatestInclusionAsync(OnlyNonConfirmedHashes);
+                    _Logger.LogInformation("External API call... Finished. Retuned {res.States.Count} states.", res.States.Count);
                 }
                 catch (Exception)
                 {
@@ -130,7 +138,7 @@ namespace IOTA_Gears.Services
                 TransactionHashList res;
                 try
                 {
-                    _Logger.LogInformation("Performing external API call FindTransactionsByAddresses for a single address...");
+                    _Logger.LogInformation("Performing external API call FindTransactionsByAddresses for a single address... via node {_ActualNodeServer}", _ActualNodeServer);
                     res = await _repo.FindTransactionsByAddressesAsync( new List<Address>() { new Address(address) } );
                     _Logger.LogInformation("External API call... Finished. Retuned {res.Hashes.Count} hashes.", res.Hashes.Count);
                 }
@@ -251,7 +259,7 @@ namespace IOTA_Gears.Services
                 List<TransactionTrytes> trnTrytes;
                 try
                 {
-                    _Logger.LogInformation("Performing external API calls GetTrytes for {OnlyNewHashes.Count} transactions...", OnlyNewHashes.Count);
+                    _Logger.LogInformation("Performing external API calls GetTrytes for {OnlyNewHashes.Count} transactions... via node {_ActualNodeServer}", OnlyNewHashes.Count, _ActualNodeServer);
 
                     trnTrytes = await _repo.GetTrytesAsync(OnlyNewHashes); // get info about TXs
 
@@ -280,7 +288,7 @@ namespace IOTA_Gears.Services
                 AddressWithBalances res;
                 try
                 {
-                    _Logger.LogInformation("Performing external API call GetBalances for a single address...");
+                    _Logger.LogInformation("Performing external API call GetBalances for a single address... via node {_ActualNodeServer}", _ActualNodeServer);
                     res = await _repo.GetBalancesAsync(new List<Tangle.Net.Entity.Address>() { new Tangle.Net.Entity.Address(address) });
                     _Logger.LogInformation("External API call... Finished");
                 }
@@ -298,12 +306,11 @@ namespace IOTA_Gears.Services
                         result: res); // Let's add actual balance
 
                     var prevBalance = CachedOutput == null ? -1 : CachedOutput.Addresses[0].Balance;
-                    _Logger.LogInformation("{callerID} in action. Balance has been changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID, prevBalance, res.Addresses[0].Balance);
+                    _Logger.LogInformation("{callerID} in action. Balance has changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID, prevBalance, res.Addresses[0].Balance);
                 }                               
 
                 return res;
             }
         }       
-
     }
 }
