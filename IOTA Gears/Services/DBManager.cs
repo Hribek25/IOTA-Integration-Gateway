@@ -57,7 +57,7 @@ namespace IOTA_Gears.Services
             
         }
         
-        public async Task AddPartialCacheEntriesAsync(string call, object input, IEnumerable<object> results)
+        public async Task AddPartialCacheEntriesAsync(string call, object input, IEnumerable<object> results, Func<object, string> identDelegate = null)
         {
             var inputcmd = _AddPartialCacheInputEntrySQL(call, input);
 
@@ -69,7 +69,7 @@ namespace IOTA_Gears.Services
                 inputcmd.Transaction = tr;
                 await inputcmd.ExecuteNonQueryAsync();
 
-                foreach (var i in _AddPartialCacheOutputEntriesSQL(call, results))
+                foreach (var i in _AddPartialCacheOutputEntriesSQL(call, results, identDelegate))
                 {
                     i.Transaction = tr;
                     await i.ExecuteNonQueryAsync();
@@ -83,7 +83,7 @@ namespace IOTA_Gears.Services
         public async Task AddPartialCacheEntryAsync(string call, object input, object result)
         {
             var inputcmd = _AddPartialCacheInputEntrySQL(call, input);
-            var outputcmd = _AddPartialCacheOutputEntrySQL(call, result);
+            var outputcmd = _AddPartialCacheOutputEntrySQL(call, null, result);
 
             DBConnection.Open();
             using (var tr = DBConnection.BeginTransaction())
@@ -215,33 +215,38 @@ namespace IOTA_Gears.Services
             return c;
         }
 
-        private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, object result)
+        private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, object result)
         {
-            var cmd = "INSERT INTO [partial_cache_out] ([timestamp], [call], [result]) VALUES (strftime('%s','now'), @call, @result)";
+            var cmd = "INSERT INTO [partial_cache_out] ([timestamp], [call], [ident], [result]) VALUES (strftime('%s','now'), @call, @ident, @result)";
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
-            var json_result = DBSerializer.SerializeToJson(result); 
-            
+            var json_result = DBSerializer.SerializeToJson(result);
+
+            var identVal = ident ?? "";
             c.Parameters.AddRange(
                 new List<SqliteParameter>()
                 {
                     new SqliteParameter("@call",call),
+                    new SqliteParameter("@ident",identVal),
                     new SqliteParameter("@result",json_result)                    
                 }
             );
             return c;
         }
-        private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results)
+        private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate = null)
         {
             var commands = new List<SqliteCommand>();
+            string identVal = "";
             foreach (var i in results)
             {
+                identVal = identDelegate!=null ? identDelegate(i) : null;
                 commands.Add(
                     _AddPartialCacheOutputEntrySQL(
                         call: call,
-                        result: i)
+                        result: i,
+                        ident: identVal)
                     );
             }
             return commands;
