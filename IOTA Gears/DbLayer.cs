@@ -64,6 +64,7 @@ DROP TABLE IF EXISTS [partial_cache_out];
 CREATE TABLE [partial_cache_out] (
   [timestamp] bigint  NOT NULL
 , [call] TEXT NOT NULL
+, [ident] TEXT NOT NULL
 , [result] TEXT NOT NULL
 );
 
