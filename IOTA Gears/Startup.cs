@@ -40,33 +40,18 @@ namespace IOTA_Gears
                                       LoggerFactory.CreateLogger<NodeManager>()
                                      );
             services.AddSingleton<INodeManager>(nm);
-
             
             // DB Manager
-            // singleton
-            var dbcon = new SqliteConnection(
-                new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource()}.ConnectionString
+            services.AddScoped<IDBManager>(
+                s => new DBManager(
+                        new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString),
+                        LoggerFactory.CreateLogger<DBManager>()
+                        )
                 );
-            
-            DBManager dbman = new DBManager(
-                    dbcon,
-                    LoggerFactory.CreateLogger<DBManager>()
-                    );
-
-            services.AddSingleton<IDBManager>(
-                dbman
-                );
-
 
             // Tangle Repo
             // this is not a singleton in order to change public nodes per each request
-            services.AddTransient<ITangleRepository>(
-                s => new TangleRepository(
-                    nm,
-                    LoggerFactory.CreateLogger<TangleRepository>(),
-                    dbman
-                    )
-                );  // incl reference to node manager
+            services.AddTransient<ITangleRepository, TangleRepository>();
 
             // Register the Swagger generator
             services.AddSwaggerGen(c =>
@@ -74,9 +59,9 @@ namespace IOTA_Gears
                 c.SwaggerDoc(
                     "v1",
                     new Info {
-                        Title = "IOTA Gears API",
+                        Title = "IOTA Integration Gateway",
                         Version = "v1",
-                        Description = "Integrate IOTA protocol with integration platforms such as ifttt.com or Office 365 to enable use cases based on workflows that are available today",
+                        Description = "Integrate IOTA protocol with business workflows that are available today",
                         Contact = new Contact
                         {
                             Name = "GitHub Repo",
@@ -88,6 +73,7 @@ namespace IOTA_Gears
                 var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
+                c.DescribeAllEnumsAsStrings();                
             });
         }
 

@@ -26,10 +26,10 @@ namespace IOTA_Gears.Services
         private ILogger<TangleRepository> Logger { get;  }
         private string ActualNodeServer { get; }
         
-        public TangleRepository(NodeManager nodemanager, ILogger<TangleRepository> logger, DBManager dbmanager) {
-            NodeManager = nodemanager;
-            Logger = logger;
-            DB = dbmanager;
+        public TangleRepository(IServiceProvider serviceProvider, ILoggerFactory logger, INodeManager nodemanager, IDBManager dBManager) {
+            NodeManager = (NodeManager)nodemanager;
+            Logger = logger.CreateLogger<TangleRepository>();
+            DB = (DBManager)dBManager;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
             ActualNodeServer = node;
@@ -89,8 +89,7 @@ namespace IOTA_Gears.Services
                 
                 // Get from a partial cache - list of confirmed TXs
                 var cached = await _DB.GetPartialCacheEntriesAsync(call: callerID);
-                var CachedInput = (string)cached.Item1; // it may be null
-                var CachedOutput = cached.Item2 == null ? new List<Hash>() : cached.Item2.Cast<Hash>().ToList();
+                var CachedOutput = cached == null ? new List<Hash>() : cached.Cast<Hash>().ToList();
 
                 var OnlyNonConfirmedHashes = hashes.Except(CachedOutput, (a, b) => a.Value == b.Value).ToList();
 
@@ -112,12 +111,12 @@ namespace IOTA_Gears.Services
                 {
                     //Write to partial cache
                     await _DB.AddPartialCacheEntriesAsync(
-                        call: callerID,
-                        input: address,
-                        results: OnlyNewlyConfirmedHashes); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
+                        call: callerID,                        
+                        results: OnlyNewlyConfirmedHashes,
+                        identDelegate: (s) => (s as Hash).Value); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
                 } 
 
-                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} confirmed hashes loaded from cache. {OnlyNewlyConfirmedHashes.Count} hashes were new ones.", callerID, CachedOutput.Count, OnlyNewlyConfirmedHashes.Count);
+                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} confirmed hashes loaded from cache. {OnlyNewlyConfirmedHashes.Count} hashes were new ones.", callerID.Substring(0,25), CachedOutput.Count, OnlyNewlyConfirmedHashes.Count);
 
                 //returning all from cache + new one from API call
                 return CachedOutput.Concat(OnlyNewlyConfirmedHashes).ToList();
@@ -131,8 +130,7 @@ namespace IOTA_Gears.Services
 
                 // Get from a partial cache
                 var cached = await _DB.GetPartialCacheEntriesAsync(call: callerID);
-                var CachedInput = (string)cached.Item1; // it may be null
-                var CachedOutput = cached.Item2==null ? new List<Hash>() : cached.Item2.Cast<Hash>().ToList<Hash>();
+                var CachedOutput = cached==null ? new List<Hash>() : cached.Cast<Hash>().ToList();
 
                 // Get info from node
                 TransactionHashList res;
@@ -152,11 +150,11 @@ namespace IOTA_Gears.Services
                     //Write to partial cache
                     await _DB.AddPartialCacheEntriesAsync(
                         call: callerID,
-                        input: address,
-                        results: OnlyNewHashes); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
+                        results: OnlyNewHashes,
+                        identDelegate: (s) => (s as Hash).Value); // Let's store only newly added items to the cache with a new timestamp and so I can check what have been new ones
                 }
 
-                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transaction hashes loaded from cache. {OnlyNewHashes.Count} hashes were new ones.", callerID, CachedOutput.Count, OnlyNewHashes.Count);
+                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transaction hashes loaded from cache. {OnlyNewHashes.Count} hashes were new ones.", callerID.Substring(0, 50), CachedOutput.Count, OnlyNewHashes.Count);
 
                 res.Hashes = CachedOutput.Concat(OnlyNewHashes).ToList() ; //returning all from cache + new one from API call
                 return res; 
@@ -181,8 +179,7 @@ namespace IOTA_Gears.Services
 
                 // Getting from a partial cache to speed up the second call
                 var cached = await _DB.GetPartialCacheEntriesAsync(call: callerID);
-                var CachedInput = (string)cached.Item1; // it may be null
-                var CachedOutput = cached.Item2 == null ? new List<EntityModels.TransactionContainer>() : cached.Item2.Cast<EntityModels.TransactionContainer>().ToList();
+                var CachedOutput = cached == null ? new List<TransactionContainer>() : cached.Cast<TransactionContainer>().ToList();
 
                 // list of TX hashes returned from cache and its confirmation status
                 Dictionary<Hash,bool?> CachedTXHashes = (from i in CachedOutput select new { i.Transaction.Hash, i.IsConfirmed }).ToDictionary(a => a.Hash, b => b.IsConfirmed); 
@@ -208,15 +205,11 @@ namespace IOTA_Gears.Services
                     {
                         List<TransactionTrytes> trnTrytes;
                         trnTrytes = await this.GetTrytesAsync(OnlyNewHashes);
-
-                        var trans = from i in trnTrytes select new TransactionContainer(i); // Converting trytes to transaction objects
+                        
+                        var trans = (from i in trnTrytes where i.TrytesLength==2673 && i.GetChunk(2322, 9).Value.Replace("9", "")!="" select new TransactionContainer(i)).ToList(); // Converting trytes to transaction objects
                         foreach (var item in trans)
                         {
-                            if (item.Transaction.Timestamp == 0) // if node returned no info about TX, then skip it. It is possible if TX hash was saved in cache from permanode but trytes are getting from normal node
-                            {
-                                _Logger.LogWarning("Null transaction identified");
-                            }
-                            else
+                            if (item.Transaction.Timestamp != 0) // if node returned no info about TX, then skip it. It is possible if TX hash was saved in cache from permanode but trytes are getting from normal node
                             {
                                 if (confirmed.Exists(e => e.Value == item.Transaction.Hash.Value))
                                 {
@@ -228,15 +221,14 @@ namespace IOTA_Gears.Services
                                 }
 
                                 resTransactions.Add(item);
-                            }
+                            }                            
                         }
 
                         //Write to partial cache
                         await _DB.AddPartialCacheEntriesAsync(
                             call: callerID,
-                            input: address,
                             results: resTransactions,
-                            identDelegate: (a) => (a as TransactionContainer).Transaction.Hash.Value //this a function that provide additional ident for each transaction
+                            identDelegate: (a) => (a as TransactionContainer).Transaction.Hash.Value // this a function that provide additional ident for each entry
                             ); // Let's store only newly added TXs to the cache with a new timestamp
                     }
 
@@ -244,7 +236,7 @@ namespace IOTA_Gears.Services
                     resTransactions.AddRange(CachedOutput);
                 }
 
-                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transactions loaded from cache. {OnlyNewHashes.Count} transactions were new ones.", callerID, CachedOutput.Count, OnlyNewHashes.Count);
+                _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transactions loaded from cache. {OnlyNewHashes.Count} transactions were new ones.", callerID.Substring(0, 50), CachedOutput.Count, OnlyNewHashes.Count);
                 return resTransactions;
                 // TODO: What if some transaction in cache is newly confirmed ? How to updated the cache
             }
@@ -260,9 +252,7 @@ namespace IOTA_Gears.Services
                 try
                 {
                     _Logger.LogInformation("Performing external API calls GetTrytes for {OnlyNewHashes.Count} transactions... via node {_ActualNodeServer}", OnlyNewHashes.Count, _ActualNodeServer);
-
                     trnTrytes = await _repo.GetTrytesAsync(OnlyNewHashes); // get info about TXs
-
                     _Logger.LogInformation("External API call... Finished. Returned {trnTrytes.Count} trytes.", trnTrytes.Count);
                 }
 
@@ -281,8 +271,7 @@ namespace IOTA_Gears.Services
 
                 // Get from a partial cache
                 var cached = await _DB.GetPartialCacheEntryAsync(call: callerID);
-                var CachedInput = (string)cached.Item1;
-                var CachedOutput = (AddressWithBalances)cached.Item2;
+                var CachedOutput = (AddressWithBalances)cached;
 
                 // Get info from node
                 AddressWithBalances res;
@@ -302,11 +291,11 @@ namespace IOTA_Gears.Services
                     //Write to partial cache
                     await _DB.AddPartialCacheEntryAsync(
                         call: callerID,
-                        input: address,
+                        ident: address,
                         result: res); // Let's add actual balance
 
                     var prevBalance = CachedOutput == null ? -1 : CachedOutput.Addresses[0].Balance;
-                    _Logger.LogInformation("{callerID} in action. Balance has changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID, prevBalance, res.Addresses[0].Balance);
+                    _Logger.LogInformation("{callerID} in action. Balance has changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID.Substring(0, 50), prevBalance, res.Addresses[0].Balance);
                 }                               
 
                 return res;
