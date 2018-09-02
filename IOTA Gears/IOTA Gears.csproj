@@ -5,8 +5,13 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>bin\Debug\netcoreapp2.0\IOTA Gears.xml</DocumentationFile>
+    <DocumentationFile>C:\Users\petr_lusyx67\OneDrive\VisualBasicProjects\repos\IOTA.Gears\IOTA Gears\IOTA Gears.xml</DocumentationFile>
     <NoWarn>1701;1702;1705;1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>C:\Users\petr_lusyx67\OneDrive\VisualBasicProjects\repos\IOTA.Gears\IOTA Gears\IOTA Gears.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
