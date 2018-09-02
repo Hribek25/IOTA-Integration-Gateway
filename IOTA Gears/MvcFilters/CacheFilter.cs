@@ -14,14 +14,12 @@ namespace IOTA_Gears.ActionFilters
         public int LifeSpan = 300;
         public int StatusCode = 200;
 
-        public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
+        public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => new CacheFilter(logger: serviceProvider.GetService<ILoggerFactory>().CreateLogger<CacheFilter>())
         {
-            return new CacheFilter(logger: serviceProvider.GetService<ILoggerFactory>().CreateLogger<CacheFilter>()) {
-                DBManager = (Services.DBManager)serviceProvider.GetService<Services.IDBManager>(),
-                CacheLifeSpan = LifeSpan,
-                StatusCode = StatusCode
-            };
-        }
+            DBManager = (Services.DBManager)serviceProvider.GetService<Services.IDBManager>(),
+            CacheLifeSpan = LifeSpan,
+            StatusCode = StatusCode
+        };
 
         public class CacheFilter : IAsyncResourceFilter
         {
@@ -29,6 +27,14 @@ namespace IOTA_Gears.ActionFilters
             public int CacheLifeSpan { get; set; }
             public ILogger<CacheFilter> Logger { get; }
             public int StatusCode = 200;
+
+            private void GetThreadInfo()
+            {
+                int availableWorkerThreads;
+                int availableAsyncIOThreads;
+                System.Threading.ThreadPool.GetAvailableThreads(out availableWorkerThreads, out availableAsyncIOThreads);
+                Logger.LogDebug("Available AsyncIOThreads: {availableAsyncIOThreads}, Available Worker Threads: {availableWorkerThreads}", availableWorkerThreads, availableAsyncIOThreads);
+            }
 
             public CacheFilter(ILogger<CacheFilter> logger)
             {
@@ -52,7 +58,8 @@ namespace IOTA_Gears.ActionFilters
                 if (c!=null) // I have a response from cache, let's perform a shortcut
                 {
                     context.Result = c;
-                    Logger.LogInformation("Cache entry was loaded from cache for Request: {context.HttpContext.Request.Path}, Lifespan = {CacheLifeSpan}", context.HttpContext.Request.Path, CacheLifeSpan);                    
+                    Logger.LogInformation("Cache entry was loaded from cache for Request: {context.HttpContext.Request.Path}, Lifespan = {CacheLifeSpan}", context.HttpContext.Request.Path, CacheLifeSpan);
+                    GetThreadInfo();
                     return; 
                 }
                 else
