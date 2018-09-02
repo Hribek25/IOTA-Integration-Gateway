@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using IOTA_Gears.ActionFilters;
 using System.Net;
 using IOTA_Gears.EntityModels;
+using System.Threading;
 
 namespace IOTA_Gears.Controllers
 {
@@ -26,20 +27,24 @@ namespace IOTA_Gears.Controllers
             _logger = logger;
         }
         //CTOR
-
-
+        
+        private void GetThreadInfo()
+        {
+            ThreadPool.GetAvailableThreads(out int availableWorkerThreads, out int availableAsyncIOThreads);
+            _logger.LogDebug("Available AsyncIOThreads: {availableAsyncIOThreads}, Available Worker Threads: {availableWorkerThreads}", availableWorkerThreads, availableAsyncIOThreads); 
+        }
 
 
 
         // GET api/tangle/getnodeinfo
         /// <summary>
-        /// Basic summary of an IOTA node and its status. It calls core IOTA API call: getNodeInfo()
+        /// Basic summary of an IOTA node and its status.
         /// </summary>
         /// <returns></returns>
         /// <response code="504">Result is not available at the moment</response>    
         [HttpGet("node/[action]")]
         [CacheTangleResponse(
-            LifeSpan = 300,
+            LifeSpan = 20,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -65,9 +70,9 @@ namespace IOTA_Gears.Controllers
 
         // GET api/tangle/address/transactions
         /// <summary>
-        /// All transaction hashes related to the given IOTA address. It calls core IOTA API call: findTransactions()
+        /// All transaction hashes related to the given IOTA address.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>List of transaction hashes</returns>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions")]
@@ -105,18 +110,18 @@ namespace IOTA_Gears.Controllers
 
 
 
-
         // GET api/tangle/address/transactions/details
         /// <summary>
-        /// All transactions including all details related to the given IOTA address. It calls core IOTA API calls: findTransactions() + getTrytes() + getLatestInclusionStates()
+        /// All transactions including all details related to the given IOTA address.
         /// </summary>
-        /// <returns>Transactions sorted in a descending order.</returns>
-        /// <param name="filter">ConfirmedOnly / All</param>
+        /// <remarks>Transactions sorted in a descending order</remarks>
+        /// <returns>List of transactions</returns>        
+        /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions/details")]
         [CacheTangleResponse(
-            LifeSpan = 300,
+            LifeSpan = 15,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -124,7 +129,7 @@ namespace IOTA_Gears.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(List<EntityModels.TransactionContainer>), (int)HttpStatusCode.OK)]
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
-        public async Task<IActionResult> TransactionsDetails(string address, TransactionFilter filter = TransactionFilter.ConfirmedOnly)
+        public async Task<IActionResult> TransactionsDetails(string address, TransactionFilter filter)
 #pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         {
             //_logger.LogDebug("{filter}", filter);
@@ -135,15 +140,15 @@ namespace IOTA_Gears.Controllers
             }
             
             List<EntityModels.TransactionContainer> res;
-            try
-            {
+            //try
+            //{
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error occured in TransactionsDetails controller");
-                return StatusCode(504); //returns 404
-            }
+            //}
+            //catch (Exception e)
+            //{
+            //    _logger.LogError(e, "Error occured in TransactionsDetails controller");
+            //    return StatusCode(504); //returns 404
+            //}
 
             List<TransactionContainer> sorted;
             if (filter==TransactionFilter.All)
@@ -154,7 +159,7 @@ namespace IOTA_Gears.Controllers
             { // only confirmed
                 sorted = (from i in res where (bool)i.IsConfirmed orderby i.Transaction.Timestamp descending select i).ToList();
             }
-            
+            GetThreadInfo();
             return Json(sorted);                    
         }
         
@@ -165,10 +170,10 @@ namespace IOTA_Gears.Controllers
         /// </summary>
         /// <returns></returns>
         /// <response code="400">Incorect format of the address</response>
-        /// <response code="404">Result is not available at the moment</response>    
+        /// <response code="504">Result is not available at the moment</response>    
         [HttpGet("address/{address}/balance")]
         [CacheTangleResponse(
-            LifeSpan = 300,
+            LifeSpan = 10,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
