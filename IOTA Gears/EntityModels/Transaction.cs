@@ -2,11 +2,12 @@
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace IOTA_Gears.EntityModels
-{
+{    
     public enum TransactionFilter
     {
         ConfirmedOnly,
@@ -36,7 +37,17 @@ namespace IOTA_Gears.EntityModels
         public TransactionContainer(Tangle.Net.Entity.Transaction transaction)
         {
             Transaction = transaction;
-            this.DecodedMessage = !Transaction.Fragment.IsEmpty ? Transaction.Fragment.ToUtf8String() : null;
+
+            try
+            {
+                this.DecodedMessage = !Transaction.Fragment.IsEmpty ? Transaction.Fragment.ToUtf8String() : null;
+            }
+            catch (Exception)
+            {
+
+                this.DecodedMessage = null;
+            }
+            
             this.TransactionType = Transaction.Value != 0 ? TransactionType.ValueTransaction : TransactionType.NonValueTransaction;
         }
 
