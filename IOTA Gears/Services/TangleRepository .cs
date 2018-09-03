@@ -32,7 +32,8 @@ namespace IOTA_Gears.Services
             DB = (DBManager)dBManager;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
-            ActualNodeServer = node;
+            ActualNodeServer = node ?? throw new Exception("There is not a NODE to deal with...");
+
             Api = new ApiTasks(
                 InitRestClient(node),
                 this
