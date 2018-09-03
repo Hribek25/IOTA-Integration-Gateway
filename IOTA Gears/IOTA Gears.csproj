@@ -2,10 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <Authors>Petr Zizka, petr@zizkovi.name</Authors>
+    <Company></Company>
+    <PackageId>IOTA Integration Gateway</PackageId>
+    <Version>0.9.0</Version>
+    <Description>https://github.com/Hribek25/IOTA-Integration-Gateway</Description>
+    <Product>IOTA Integration Gateway</Product>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>C:\Users\petr_lusyx67\OneDrive\VisualBasicProjects\repos\IOTA.Gears\IOTA Gears\IOTA Gears.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\netcoreapp2.0\IOTA Gears.xml</DocumentationFile>
     <NoWarn>1701;1702;1705;1591</NoWarn>
   </PropertyGroup>
 
