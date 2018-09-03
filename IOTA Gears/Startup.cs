@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using IOTA_Gears.Services;
 using Microsoft.Data.Sqlite;
 using Swashbuckle.AspNetCore.Swagger;
@@ -39,6 +40,7 @@ namespace IOTA_Gears
                                       select i.Value).ToList<string>(),
                                       LoggerFactory.CreateLogger<NodeManager>()
                                      );
+
             services.AddSingleton<INodeManager>(nm);
             
             // DB Manager
@@ -67,7 +69,7 @@ namespace IOTA_Gears
                             Name = "GitHub Repo",
                             Email = string.Empty,
                             Url = "https://github.com/Hribek25/IOTA.Gears"
-                        }
+                        }                        
                     });
                 // Set the comments path for the Swagger JSON and UI.
                 var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -75,6 +77,9 @@ namespace IOTA_Gears
                 c.IncludeXmlComments(xmlPath);
                 c.DescribeAllEnumsAsStrings();                
             });
+
+            // Background Tasks Service
+            services.AddSingleton<IHostedService, TimedBackgroundService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -85,16 +90,14 @@ namespace IOTA_Gears
                 app.UseDeveloperExceptionPage();
             }
 
-
             // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
 
             // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), 
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "IOTA Gears API");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "IOTA Gears API");                
             });
-
 
             app.UseMvc();
         }
