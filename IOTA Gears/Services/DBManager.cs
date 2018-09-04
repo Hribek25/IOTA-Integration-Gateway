@@ -58,7 +58,7 @@ namespace IOTA_Gears.Services
             
         }
         
-        public async Task AddPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate)
+        public async Task AddPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
         {
             if (identDelegate==null)
             {
@@ -70,7 +70,7 @@ namespace IOTA_Gears.Services
             var cnt = 0;
             using (var tr = DBConnection.BeginTransaction())
             {                
-                foreach (var i in _AddPartialCacheOutputEntriesSQL(call, results, identDelegate))
+                foreach (var i in _AddPartialCacheOutputEntriesSQL(call, results, identDelegate, EntityTimestampDelegate))
                 {
                     i.Transaction = tr;
                     await i.ExecuteNonQueryAsync();
@@ -81,9 +81,9 @@ namespace IOTA_Gears.Services
             DBConnection.Close();
             Logger.LogInformation("Partial cache used (ADD) for multiple elements. {cnt} records were saved for the caller {call}.", cnt, call.Substring(0, 50));
         }
-        public async Task AddPartialCacheEntryAsync(string call, string ident, object result)
+        public async Task AddPartialCacheEntryAsync(string call, string ident, long timestamp, object result)
         {
-            var outputcmd = _AddPartialCacheOutputEntrySQL(call, ident, result);
+            var outputcmd = _AddPartialCacheOutputEntrySQL(call, ident, timestamp, result);
 
             DBConnection.Open();
             using (var tr = DBConnection.BeginTransaction())
@@ -185,33 +185,33 @@ namespace IOTA_Gears.Services
             return c;
         }
 
-        private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, object result)
+        private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
         {
             if (string.IsNullOrWhiteSpace(ident))
             {
                 throw new ArgumentNullException("Ident parameter can't be empty.");
             }
 
-            var cmd = "DELETE FROM [partial_cache_out] WHERE [call]=@call and [ident]=@ident;" + Environment.NewLine;
-            cmd += "INSERT INTO [partial_cache_out] ([timestamp], [call], [ident], [result]) VALUES (strftime('%s','now'), @call, @ident, @result)";
+            var cmd = "DELETE FROM [partial_cache] WHERE [call]=@call and [ident]=@ident;" + Environment.NewLine;
+            cmd += "INSERT INTO [partial_cache] ([timestamp], [call], [ident], [EntityTimestamp], [result]) VALUES (strftime('%s','now'), @call, @ident, @txtimestamp, @result)";
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
             var json_result = DBSerializer.SerializeToJson(result);
-            
-            var identVal = ident;
+                        
             c.Parameters.AddRange(
                 new List<SqliteParameter>()
                 {
                     new SqliteParameter("@call",call),
-                    new SqliteParameter("@ident",identVal),
-                    new SqliteParameter("@result",json_result)                    
+                    new SqliteParameter("@ident",ident),
+                    new SqliteParameter("@result",json_result),
+                    new SqliteParameter("@txtimestamp",timestamp)
                 }
             );
             return c;
         }
-        private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate)
+        private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
         {
             if (identDelegate==null)
             {
@@ -220,13 +220,17 @@ namespace IOTA_Gears.Services
 
             var commands = new List<SqliteCommand>();
             string identVal = "";
+            long EntityTimestamp = 0;
             foreach (var i in results)
             {
                 identVal = identDelegate(i);
+                EntityTimestamp = EntityTimestampDelegate==null ? 0 : EntityTimestampDelegate(i);
+
                 commands.Add(
                     _AddPartialCacheOutputEntrySQL(
                         call: call,
                         ident: identVal,
+                        timestamp: EntityTimestamp,
                         result: i)
                     );
             }
@@ -235,7 +239,7 @@ namespace IOTA_Gears.Services
         
         private SqliteCommand _GetPartialCacheOutputEntrySQL(string call)
         {
-            var cmd = "SELECT * FROM [partial_cache_out] WHERE [call]=@call ORDER BY datetime([timestamp]) DESC";
+            var cmd = "SELECT * FROM [partial_cache] WHERE [call]=@call ORDER BY datetime([timestamp]) DESC";
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
             c.Parameters.AddRange(

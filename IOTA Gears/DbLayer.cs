@@ -32,7 +32,7 @@ namespace IOTA_Gears
                         tables.Add((string)reader["name"]);
                     }
 
-                    if (!tables.Contains("cache") || !tables.Contains("partial_cache_out"))
+                    if (!tables.Contains("cache") || !tables.Contains("partial_cache"))
                     {
                         connection.Close();
                         return false;
@@ -60,13 +60,13 @@ CREATE TABLE [cache] (
 , [response] text NOT NULL
 );
 
-DROP TABLE IF EXISTS [partial_cache_out];
-CREATE TABLE [partial_cache_out] (
-  [timestamp] bigint  NOT NULL
+DROP TABLE IF EXISTS [partial_cache];
+CREATE TABLE [partial_cache] (
+[timestamp] bigint NOT NULL
 , [call] TEXT NOT NULL
 , [ident] TEXT NOT NULL
-, [result] TEXT NOT NULL
-);
+, [EntityTimestamp] bigint
+, [result] TEXT NOT NULL)
 ";
             var c = connection.CreateCommand();
             c.CommandText = initscript;
