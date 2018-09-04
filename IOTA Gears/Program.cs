@@ -18,6 +18,10 @@ namespace IOTA_Gears
                 "iotagears_pipeline.sqlite"
                 );
 
+        public static string AppVersion() => 
+            Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+
+
         public static void Main(string[] args)
         {
             if (DbLayer.IsDBLayerReady())
