@@ -39,7 +39,7 @@ namespace IOTA_Gears.Services
             this.HealthCheckingInProgress = true; // basic semaphore
             _logger.LogInformation("Background Task: Health Check of nodes... Starting");
 
-            var Status = this._nodemanager.PerformHealthCheckAsync().Result; //Performing initial health check
+            var Status = this._nodemanager.PerformHealthCheckAsync().Result; //Performing health check
             var HealthyOnes = (from n in Status where n.Value == true select n.Key).ToList();
             this._nodemanager.Nodes = HealthyOnes;
 
