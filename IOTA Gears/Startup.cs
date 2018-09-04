@@ -16,16 +16,9 @@ using Swashbuckle.AspNetCore.Swagger;
 namespace IOTA_Gears
 {
     public class Startup
-    {
-        public IConfiguration Configuration { get; }
-        private IHostingEnvironment HostingEnv { get;  }
-        private ILoggerFactory LoggerFactory { get; }
-
-        public Startup(IConfiguration configuration, IHostingEnvironment env, ILoggerFactory loggerFactory)
-        {
-            Configuration = configuration;
-            HostingEnv = env;
-            LoggerFactory = loggerFactory;                       
+    {        
+        public Startup()
+        {            
         }
                
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -34,25 +27,12 @@ namespace IOTA_Gears
             services.AddMvc();
 
             // Node Manager
-            // singleton - initialized only once using values from json config file
-            var nm = new NodeManager((from i in Configuration.AsEnumerable()
-                                      where i.Key.StartsWith("IOTANodes:")
-                                      select i.Value).ToList<string>(),
-                                      LoggerFactory.CreateLogger<NodeManager>()
-                                     );
-
-            services.AddSingleton<INodeManager>(nm);
+            services.AddSingleton<INodeManager, NodeManager>();
             
             // DB Manager
-            services.AddScoped<IDBManager>(
-                s => new DBManager(
-                        new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString),
-                        LoggerFactory.CreateLogger<DBManager>()
-                        )
-                );
+            services.AddScoped<IDBManager, DBManager>();
 
             // Tangle Repo
-            // this is not a singleton in order to change public nodes per each request
             services.AddTransient<ITangleRepository, TangleRepository>();
 
             // Register the Swagger generator

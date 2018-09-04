@@ -26,9 +26,9 @@ namespace IOTA_Gears.Services
         private ILogger<TangleRepository> Logger { get;  }
         private string ActualNodeServer { get; }
         
-        public TangleRepository(IServiceProvider serviceProvider, ILoggerFactory logger, INodeManager nodemanager, IDBManager dBManager) {
+        public TangleRepository(ILogger<TangleRepository> logger, INodeManager nodemanager, IDBManager dBManager) {
             NodeManager = (NodeManager)nodemanager;
-            Logger = logger.CreateLogger<TangleRepository>();
+            Logger = logger;
             DB = (DBManager)dBManager;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
@@ -42,7 +42,7 @@ namespace IOTA_Gears.Services
         
         private RestIotaRepository InitRestClient(string node)
         {
-            var res = new RestIotaRepository(new RestClient(node));
+            var res = new RestIotaRepository(new RestClient(node) { Timeout=5000});
             Logger.LogInformation("TangleRepository initiated... selected node: {node}", node);
             return res;
         }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +18,9 @@ namespace IOTA_Gears.Services
         public List<string> StartupNodes { get; }
         private ILogger<NodeManager>  Logger { get; set; }
 
-        public NodeManager(List<string> nodes, ILogger<NodeManager> logger = null)
+        public NodeManager(IConfiguration configuration, ILogger<NodeManager> logger)
         {
+            var nodes = (from i in configuration.AsEnumerable() where i.Key.StartsWith("IOTANodes:") select i.Value).ToList();
             Nodes = nodes;
             StartupNodes = nodes;
 
@@ -41,7 +43,9 @@ namespace IOTA_Gears.Services
             var stats = new Dictionary<string, Tangle.Net.Repository.DataTransfer.NodeInfo>();
             foreach (var node in this.StartupNodes) // always starts with all original nodes
             {
-                var repo = new Tangle.Net.Repository.RestIotaRepository(new RestSharp.RestClient(node));
+                var repo = new Tangle.Net.Repository.RestIotaRepository(
+                    new RestSharp.RestClient(node) { Timeout = 1000 }
+                );
 
                 Tangle.Net.Repository.DataTransfer.NodeInfo ninfo;
                 try

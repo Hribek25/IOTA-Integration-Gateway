@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace IOTA_Gears.Services
 {
@@ -14,16 +15,16 @@ namespace IOTA_Gears.Services
     {
         
     }
-
+    
     public class DBManager : IDBManager, IDisposable
     {
         public SqliteConnection DBConnection { get; private set; }
         private ILogger<DBManager> Logger { get; set; }
 
-        public DBManager(SqliteConnection connection, ILogger<DBManager> logger)
-        {
+        public DBManager(ILogger<DBManager> logger)
+        {            
             Logger = logger;
-            DBConnection = connection;                        
+            DBConnection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString);
             Logger.LogInformation("DB LAYER ready... Using file: {DBConnection.DataSource}", DBConnection.DataSource);            
         }
 
