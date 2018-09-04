@@ -30,9 +30,7 @@ namespace IOTA_Gears.ActionFilters
 
             private void GetThreadInfo()
             {
-                int availableWorkerThreads;
-                int availableAsyncIOThreads;
-                System.Threading.ThreadPool.GetAvailableThreads(out availableWorkerThreads, out availableAsyncIOThreads);
+                System.Threading.ThreadPool.GetAvailableThreads(out int availableWorkerThreads, out int availableAsyncIOThreads);
                 Logger.LogDebug("Available AsyncIOThreads: {availableAsyncIOThreads}, Available Worker Threads: {availableWorkerThreads}", availableWorkerThreads, availableAsyncIOThreads);
             }
 
@@ -59,7 +57,7 @@ namespace IOTA_Gears.ActionFilters
                 {
                     context.Result = c;
                     Logger.LogInformation("Cache entry was loaded from cache for Request: {context.HttpContext.Request.Path}, Lifespan = {CacheLifeSpan}", context.HttpContext.Request.Path, CacheLifeSpan);
-                    GetThreadInfo();
+                    //GetThreadInfo();
                     return; 
                 }
                 else

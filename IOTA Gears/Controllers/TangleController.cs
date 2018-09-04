@@ -159,7 +159,6 @@ namespace IOTA_Gears.Controllers
             { // only confirmed
                 sorted = (from i in res where (bool)i.IsConfirmed orderby i.Transaction.Timestamp descending select i).ToList();
             }
-            GetThreadInfo();
             return Json(sorted);                    
         }
         
