@@ -55,40 +55,35 @@ namespace IOTA_Gears.Services
                 catch (Exception)
                 {
                     ninfo = null;
-                }
+                }               
 
-                if (ninfo!=null)
-                {
-                    stats.Add(node, ninfo);
-                }                                
+                stats.Add(node, ninfo);                
             }
 
             var res = new Dictionary<string, bool>();
-            if (stats.Count > 0)
+            var maxMilestoneIndex = stats.Values.Max((x) => x==null ? -1 : x.LatestMilestoneIndex);
+            foreach (var node in stats)
             {
-                var maxMilestoneIndex = stats.Values.Max((x) => x.LatestMilestoneIndex);
-                foreach (var node in stats)
+                if (node.Value!=null && (maxMilestoneIndex - node.Value.LatestMilestoneIndex) < 3 &&
+                    Math.Abs(node.Value.LatestMilestoneIndex - node.Value.LatestSolidSubtangleMilestoneIndex) < 3 &&
+                    node.Value.Neighbors > 2)
                 {
-                    if ((maxMilestoneIndex - node.Value.LatestMilestoneIndex) < 3 &&
-                        (Math.Abs(node.Value.LatestMilestoneIndex - node.Value.LatestSolidSubtangleMilestoneIndex)) < 3 &&
-                        node.Value.Neighbors > 2)
+                    res.Add(node.Key, true);
+                    if (Logger != null)
                     {
-                        res.Add(node.Key, true);
-                        if (Logger != null)
-                        {
-                            Logger.LogInformation("{node.Key} is healthy! LatestMilestoneIndex: {node.Value.LatestMilestoneIndex}", node.Key, node.Value.LatestMilestoneIndex);
-                        }
+                        Logger.LogInformation("{node.Key} is healthy! LatestMilestoneIndex: {node.Value.LatestMilestoneIndex}", node.Key, node.Value.LatestMilestoneIndex);
                     }
-                    else
+                }
+                else
+                {
+                    res.Add(node.Key, false);
+                    if (Logger != null)
                     {
-                        res.Add(node.Key, false);
-                        if (Logger != null)
-                        {
-                            Logger.LogInformation("{node.Key} is in bad condition!", node.Key);
-                        }
+                        Logger.LogInformation("{node.Key} is in bad condition!", node.Key);
                     }
                 }
             }
+            
             return res;
         }
         
