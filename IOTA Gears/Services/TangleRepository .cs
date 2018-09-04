@@ -229,8 +229,25 @@ namespace IOTA_Gears.Services
                         await _DB.AddPartialCacheEntriesAsync(
                             call: callerID,
                             results: resTransactions,
-                            identDelegate: (a) => (a as TransactionContainer).Transaction.Hash.Value // this a function that provide additional ident for each entry
+                            identDelegate: (a) => (a as TransactionContainer).Transaction.Hash.Value, // this a function that provide additional ident for each entry
+                            EntityTimestampDelegate: (a) => (a as TransactionContainer).Transaction.Timestamp
                             ); // Let's store only newly added TXs to the cache with a new timestamp
+                    }
+
+                    // Updating cache entries of those newly confirmed transactions that were in cache
+                    var CacheEntriesToBeUpdated = (from t in CachedOutput
+                                                   where t.IsConfirmed == false && confirmed.Exists(e => e.Value == t.Transaction.Hash.Value)
+                                                   select t).Select(x => { x.IsConfirmed = true; return x; }).ToList();
+
+                    if (CacheEntriesToBeUpdated.Count>0)
+                    {
+                        //Write to partial cache
+                        await _DB.AddPartialCacheEntriesAsync(
+                            call: callerID,
+                            results: CacheEntriesToBeUpdated,
+                            identDelegate: (a) => (a as TransactionContainer).Transaction.Hash.Value,
+                            EntityTimestampDelegate: (a) => (a as TransactionContainer).Transaction.Timestamp
+                            );
                     }
 
                     // adding original transations from the cache to the output
@@ -238,8 +255,7 @@ namespace IOTA_Gears.Services
                 }
 
                 _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transactions loaded from cache. {OnlyNewHashes.Count} transactions were new ones.", callerID.Substring(0, 50), CachedOutput.Count, OnlyNewHashes.Count);
-                return resTransactions;
-                // TODO: What if some transaction in cache is newly confirmed ? How to updated the cache
+                return resTransactions;                
             }
 
             private async Task<List<TransactionTrytes>> GetTrytesAsync(List<Hash> OnlyNewHashes)
@@ -293,6 +309,7 @@ namespace IOTA_Gears.Services
                     await _DB.AddPartialCacheEntryAsync(
                         call: callerID,
                         ident: address,
+                        timestamp: 0,
                         result: res); // Let's add actual balance
 
                     var prevBalance = CachedOutput == null ? -1 : CachedOutput.Addresses[0].Balance;
