@@ -25,6 +25,7 @@ namespace IOTA_Gears.EntityModels
         public Tangle.Net.Entity.Transaction Transaction { get; set; }
         public bool? IsConfirmed { get; set; } = null;
         public string DecodedMessage { get; set; } = null;
+        public long Timestamp { get; set; } = 0;
 
         [JsonConverter(typeof(StringEnumConverter))]
         public TransactionType TransactionType { get; set; }
@@ -44,11 +45,11 @@ namespace IOTA_Gears.EntityModels
             }
             catch (Exception)
             {
-
                 this.DecodedMessage = null;
             }
             
             this.TransactionType = Transaction.Value != 0 ? TransactionType.ValueTransaction : TransactionType.NonValueTransaction;
+            this.Timestamp = Transaction.Timestamp;
         }
 
         public TransactionContainer(Tangle.Net.Entity.TransactionTrytes trytes) : this(Tangle.Net.Entity.Transaction.FromTrytes(trytes))
