@@ -32,7 +32,9 @@ namespace IOTA_Gears
             else
             {
                 Console.WriteLine("DB layer is not ready. Halting...");
-            }            
+            }
+
+            Console.WriteLine("Program has been terminated...");
         }
 
         public static IWebHost BuildWebHost(string[] args) =>
