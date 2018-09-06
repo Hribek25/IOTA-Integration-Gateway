@@ -33,7 +33,7 @@ namespace IOTA_Gears.Services
             }            
         }
 
-        public async Task<Dictionary<string, bool>> PerformHealthCheckAsync()
+        public Dictionary<string, bool> PerformHealthCheck()
         {
             if (Logger != null)
             {
@@ -50,11 +50,12 @@ namespace IOTA_Gears.Services
                 Tangle.Net.Repository.DataTransfer.NodeInfo ninfo;
                 try
                 {
-                    ninfo = await repo.GetNodeInfoAsync();
+                    ninfo = repo.GetNodeInfo();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     ninfo = null;
+                    Logger.LogInformation("Error while checking {node}. Error: {e.Message}", node, e.Message);
                 }               
 
                 stats.Add(node, ninfo);                
