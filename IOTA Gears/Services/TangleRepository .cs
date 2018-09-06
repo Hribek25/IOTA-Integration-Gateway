@@ -10,6 +10,10 @@ using Tangle.Net.Repository;
 using Tangle.Net.Repository.DataTransfer;
 using Tangle.Net.Entity;
 using IOTA_Gears.EntityModels;
+using Tangle.Net.Utils;
+using Tangle.Net.ProofOfWork.Service;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 
 namespace IOTA_Gears.Services
 {
@@ -24,12 +28,14 @@ namespace IOTA_Gears.Services
         private NodeManager NodeManager { get;  }
         private DBManager DB { get; }
         private ILogger<TangleRepository> Logger { get;  }
+        private TimedBackgroundService TimedBackgroundService { get; }
         private string ActualNodeServer { get; }
         
-        public TangleRepository(ILogger<TangleRepository> logger, INodeManager nodemanager, IDBManager dBManager) {
+        public TangleRepository(ILogger<TangleRepository> logger, INodeManager nodemanager, IDBManager dBManager, IHostedService timedbackgroundservice) {
             NodeManager = (NodeManager)nodemanager;
             Logger = logger;
             DB = (DBManager)dBManager;
+            TimedBackgroundService = (TimedBackgroundService)timedbackgroundservice;
 
             var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
             ActualNodeServer = node ?? throw new Exception("There is not a NODE to deal with...");
@@ -53,6 +59,7 @@ namespace IOTA_Gears.Services
             private DBManager _DB { get; }
             private ILogger<TangleRepository> _Logger { get; }
             private string _ActualNodeServer { get; }
+            private TimedBackgroundService _TimedBackgroundService { get; }
 
             public ApiTasks(RestIotaRepository repo, TangleRepository parent)
             {
@@ -60,6 +67,7 @@ namespace IOTA_Gears.Services
                 _DB = parent.DB;
                 _Logger = parent.Logger;
                 _ActualNodeServer = parent.ActualNodeServer;
+                _TimedBackgroundService = parent.TimedBackgroundService;
             }
 
             public async Task<NodeInfo> GetNodeInfoAsync()
@@ -318,6 +326,24 @@ namespace IOTA_Gears.Services
 
                 return res;
             }
+
+            public async Task<PipelineStatus> AddTransactionToPipeline(string address, string message, HttpRequest request )
+            {
+                var task = "SendTX";
+                var guid = System.Guid.NewGuid().ToString(); // unique ID of the task
+                var ip = request.HttpContext.Connection.RemoteIpAddress.ToString();
+                
+                // todo: abuse check 
+
+                await _DB.AddTaskEntryAsync(task, new TaskEntryInput() { Address=address, Message=message, Tag= "IO9GATEWAY9NET" }, ip, guid); //save the given prepared budndle to the pipeline
+                if (!_TimedBackgroundService.ProcessingTasksActive)
+                { // start processing pipeline
+                    _TimedBackgroundService.StartProcessingPipeline();
+                }
+                
+                return new PipelineStatus() { Status=StatusDetail.TaskWasAddedToPipeline, GuId=guid };
+            }
+
         }       
     }
 }

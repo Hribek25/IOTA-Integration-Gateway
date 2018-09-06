@@ -33,8 +33,7 @@ namespace IOTA_Gears.Controllers
             ThreadPool.GetAvailableThreads(out int availableWorkerThreads, out int availableAsyncIOThreads);
             _logger.LogDebug("Available AsyncIOThreads: {availableAsyncIOThreads}, Available Worker Threads: {availableWorkerThreads}", availableWorkerThreads, availableAsyncIOThreads); 
         }
-
-
+        
 
         // GET api/tangle/getnodeinfo
         /// <summary>
@@ -199,6 +198,29 @@ namespace IOTA_Gears.Controllers
             }
 
             return Json(res);
+        }
+
+        // POST api/tangle/address/sendtx
+        [HttpPost("address/{address}/sendtx")]
+        public async Task<IActionResult> SendTX(string address, [FromBody] string message)
+        {
+            if (!CommonHelpers.IsValidAddress(address) || !ModelState.IsValid)
+            {
+                return BadRequest(); //return 400
+            }
+            
+            PipelineStatus res;
+            //try
+            //{
+                res = await _repository.Api.AddTransactionToPipeline(address, message, Request);
+            //}
+            //catch (Exception e)
+            //{
+                //_logger.LogError(e, "Error occured in Balance controller");
+                //return StatusCode(504);
+            //}
+
+            return Created("", value: res);
         }
     }
 }
