@@ -23,11 +23,13 @@ namespace IOTA_Gears
 
         public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
+            
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
 
             // Read the properties which will be used as constructor parameters
             string value = (string)jo["Value"];
+            
             string checksum = "";
             if (jo["Checksum"].Contains("Value") && jo["Checksum"]["Value"].Type == JTokenType.String)
             {
@@ -111,6 +113,7 @@ namespace IOTA_Gears
         public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
+            
             JObject jo = JObject.Load(reader);
 
             // Read the properties which will be used as constructor parameters
@@ -148,6 +151,7 @@ namespace IOTA_Gears
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
+            
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
 

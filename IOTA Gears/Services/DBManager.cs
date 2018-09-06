@@ -8,6 +8,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
+using IOTA_Gears.EntityModels;
 
 namespace IOTA_Gears.Services
 {
@@ -25,7 +26,7 @@ namespace IOTA_Gears.Services
         {            
             Logger = logger;
             DBConnection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString);
-            Logger.LogInformation("DB LAYER ready... Using file: {DBConnection.DataSource}", DBConnection.DataSource);            
+            Logger.LogInformation("DB storage initiated and ready... Using file: {DBConnection.DataSource}", DBConnection.DataSource);            
         }
 
         public async Task<JsonResult> GetCacheEntryAsync(string request, string contentType, int LifeSpan)
@@ -86,15 +87,20 @@ namespace IOTA_Gears.Services
             var outputcmd = _AddPartialCacheOutputEntrySQL(call, ident, timestamp, result);
 
             DBConnection.Open();
-            using (var tr = DBConnection.BeginTransaction())
-            {
-                outputcmd.Transaction = tr;
-                await outputcmd.ExecuteNonQueryAsync();
-                tr.Commit();
-            }           
-            
+            await outputcmd.ExecuteNonQueryAsync();
             DBConnection.Close();
+
             Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call.Substring(0, 50));
+        }
+        public async Task AddTaskEntryAsync(string task, object input, string ip, string guid)
+        {
+            var outputcmd = _AddTaskEntrySQL(task, input, ip, guid);
+
+            DBConnection.Open();
+            await outputcmd.ExecuteNonQueryAsync();
+            DBConnection.Close();
+
+            Logger.LogInformation("Task pipeline (ADD) for an individual element. {input.GetType()} object was saved for the task {task}.", input.GetType(), task);
         }
 
         public async Task<List<object>> GetPartialCacheEntriesAsync(string call)
@@ -145,7 +151,48 @@ namespace IOTA_Gears.Services
 
             return OutputCacheEntry;
         }
+        public async Task<List<TaskEntry>> GetTaskEntryFromPipelineAsync(int limit = 1)
+        {
+            var outputcmd = _GetTasksInPipelineSQL(limit);
+
+            DBConnection.Open();
+
+            var output = new List<TaskEntry>();
+            using (var reader = await outputcmd.ExecuteReaderAsync())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        var entry = new TaskEntry()
+                        {
+                            Rowid = (long)reader["rowid"],
+                            Input = (TaskEntryInput)DBSerializer.DeserializeFromJson((string)reader["input"]),
+                            Task = (string)reader["task"],
+                            Timestamp = (long)reader["timestamp"],
+                            GuId = (string)reader["guid"]
+                        };
+                        output.Add(entry);
+                    }
+                }
+            }
+
+            DBConnection.Close();
+            Logger.LogInformation("Task pipeline (GET) for individual element. {output.count} elements were returned.", output.Count);
+            return output;
+        }
         
+        public async Task UpdateTaskEntryInPipeline(long rowid, int performed, object result)
+        {
+            var outputcmd = _UpdateTaskEntrySQL(rowid, performed, result);
+
+            DBConnection.Open();
+            await outputcmd.ExecuteNonQueryAsync();
+            DBConnection.Close();
+
+            Logger.LogInformation("Task pipeline (UPDATE) for an individual element. Rowid {rowid} was updated with status {performed}.", rowid, performed);
+        }
+
         #region SQLHelpers
         private SqliteCommand _AddCacheEntrySQL(string request, JsonResult result, string contentType)
         {
@@ -169,6 +216,7 @@ namespace IOTA_Gears.Services
             );
             return c;
         }
+
         private SqliteCommand _GetCacheEntrySQL(string request, string contentType, int LifeSpan)
         {
             var cmd = "SELECT * FROM [cache] WHERE (cast(strftime('%s','now') as bigint)-cast([timestamp] as bigint))<=@span and [query]=@query and [response_type] like @contenttype";
@@ -185,6 +233,20 @@ namespace IOTA_Gears.Services
             return c;
         }
 
+        private SqliteCommand _GetTasksInPipelineSQL(int limit=1)
+        {
+            var cmd = "SELECT rowid, * FROM [task_pipeline] WHERE performed=0 ORDER BY timestamp ASC LIMIT @limit";
+            var c = DBConnection.CreateCommand();
+            c.CommandText = cmd;
+            c.Parameters.AddRange(
+                new List<SqliteParameter>()
+                {
+                    new SqliteParameter("@limit", limit)
+                }
+            );
+            return c;
+        }
+        
         private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
         {
             if (string.IsNullOrWhiteSpace(ident))
@@ -211,6 +273,7 @@ namespace IOTA_Gears.Services
             );
             return c;
         }
+
         private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
         {
             if (identDelegate==null)
@@ -239,13 +302,54 @@ namespace IOTA_Gears.Services
         
         private SqliteCommand _GetPartialCacheOutputEntrySQL(string call)
         {
-            var cmd = "SELECT * FROM [partial_cache] WHERE [call]=@call ORDER BY datetime([timestamp]) DESC";
+            var cmd = "SELECT * FROM [partial_cache] WHERE [call]=@call ORDER BY [timestamp] DESC";
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
             c.Parameters.AddRange(
                 new List<SqliteParameter>()
                 {
                     new SqliteParameter("@call",call)                    
+                }
+            );
+            return c;
+        }
+
+        private SqliteCommand _AddTaskEntrySQL(string task, object input, string ip, string guid)
+        {
+            var cmd = "INSERT INTO [task_pipeline] ([timestamp], [task], [input], [performed], [ip], [guid]) VALUES (strftime('%s','now'), @task, @input, 0, @ip, @guid);";
+
+            var c = DBConnection.CreateCommand();
+            c.CommandText = cmd;
+
+            var json_result = DBSerializer.SerializeToJson(input);
+
+            c.Parameters.AddRange(
+                new List<SqliteParameter>()
+                {
+                    new SqliteParameter("@task", task),
+                    new SqliteParameter("@input", json_result),
+                    new SqliteParameter("@ip", ip),
+                    new SqliteParameter("@guid", guid)
+                }
+            );
+            return c;
+        }
+
+        private SqliteCommand _UpdateTaskEntrySQL(long rowid, int performed, object result)
+        {
+            var cmd = "UPDATE [task_pipeline] SET [performed_when]=strftime('%s','now'), [result]=@result, [performed]=@performed WHERE rowid=@rowid;";
+
+            var c = DBConnection.CreateCommand();
+            c.CommandText = cmd;
+
+            var json_result = DBSerializer.SerializeToJson(result);
+
+            c.Parameters.AddRange(
+                new List<SqliteParameter>()
+                {
+                    new SqliteParameter("@performed", performed),
+                    new SqliteParameter("@result", json_result),
+                    new SqliteParameter("@rowid", rowid)
                 }
             );
             return c;

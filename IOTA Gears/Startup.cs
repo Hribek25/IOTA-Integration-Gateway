@@ -30,7 +30,7 @@ namespace IOTA_Gears
             services.AddSingleton<INodeManager, NodeManager>();
             
             // DB Manager
-            services.AddScoped<IDBManager, DBManager>();
+            services.AddTransient<IDBManager, DBManager>();
 
             // Tangle Repo
             services.AddTransient<ITangleRepository, TangleRepository>();
