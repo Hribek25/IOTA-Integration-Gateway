@@ -43,7 +43,7 @@ namespace IOTAGears
                     new Info {
                         Title = "IOTA Integration Gateway",
                         Version = "v1",
-                        Description = "Integrate IOTA protocol with business workflows that are available today",
+                        Description = "Integrate IOTA protocol with business workflows that are available today",                        
                         Contact = new Contact
                         {
                             Name = "GitHub Repo",
@@ -77,7 +77,11 @@ namespace IOTAGears
             // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), 
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "IOTA Gears API");                
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "IOTA Gateway API");
+                c.RoutePrefix = "docs";
+                c.DocumentTitle = "IOTA Gateway API Documentation";
+                c.DocExpansion(DocExpansion.None);
+
             });
 
             app.UseMvc();

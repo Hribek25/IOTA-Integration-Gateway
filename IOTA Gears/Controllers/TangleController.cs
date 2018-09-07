@@ -37,7 +37,7 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/getnodeinfo
         /// <summary>
-        /// Basic summary of an IOTA node and its status.
+        /// Basic summary of an IOTA node and its status
         /// </summary>
         /// <returns></returns>
         /// <response code="504">Result is not available at the moment</response>    
@@ -48,7 +48,7 @@ namespace IOTAGears.Controllers
             ]
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
-        [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.NodeInfo), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(NodeInfo), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetNodeInfo()
         {
             NodeInfo res;
@@ -56,10 +56,9 @@ namespace IOTAGears.Controllers
             {
                 res = await _repository.Api.GetNodeInfoAsync();
             }
-
             catch (Exception e)
             {
-                _logger.LogError(e, "Error occured");
+                _logger.LogError(e, "Error occured in " + nameof(GetNodeInfo));
                 return StatusCode(504); // return 404 error
             }            
             return Json(res); // Format the output
@@ -69,7 +68,7 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/address/transactions
         /// <summary>
-        /// All transaction hashes related to the given IOTA address.
+        /// All transaction hashes related to the given IOTA address
         /// </summary>
         /// <returns>List of transaction hashes</returns>
         /// <response code="400">Incorect format of the address</response>
@@ -91,7 +90,6 @@ namespace IOTAGears.Controllers
             }
 
             TransactionHashList res;
-
             try
             {
                 // get a list of transactions to the given address
@@ -99,8 +97,8 @@ namespace IOTAGears.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error occured in Transactions controller");
-                return StatusCode(504); // return 404 error                
+                _logger.LogError(e, "Error occured in " + nameof(Transactions));
+                return StatusCode(504); // return 504 error       
             }
 
             return Json(res);                       
@@ -111,7 +109,7 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/address/transactions/details
         /// <summary>
-        /// All transactions including all details related to the given IOTA address.
+        /// All transactions including all details related to the given IOTA address
         /// </summary>
         /// <remarks>Transactions sorted in a descending order</remarks>
         /// <returns>List of transactions</returns>        
@@ -126,28 +124,26 @@ namespace IOTAGears.Controllers
         [Produces("application/javascript")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType(typeof(List<EntityModels.TransactionContainer>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         public async Task<IActionResult> TransactionsDetails(string address, TransactionFilter filter)
 #pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         {
-            //_logger.LogDebug("{filter}", filter);
-
             if (!CommonHelpers.IsValidAddress(address))
             {
                 return BadRequest(); //return 400 error
             }
             
-            List<EntityModels.TransactionContainer> res;
-            //try
-            //{
+            List<TransactionContainer> res;
+            try
+            {
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
-            //}
-            //catch (Exception e)
-            //{
-            //    _logger.LogError(e, "Error occured in TransactionsDetails controller");
-            //    return StatusCode(504); //returns 404
-            //}
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error occured in " + nameof(TransactionsDetails));
+                return StatusCode(504); //returns 504
+            }
 
             List<TransactionContainer> sorted;
             if (filter==TransactionFilter.All)
@@ -160,22 +156,22 @@ namespace IOTAGears.Controllers
             }
             return Json(sorted);                    
         }
-        
-        
+
+
         // GET api/tangle/address/balance
         /// <summary>
-        /// Confirmed balance of the given IOTA address based on the latest confirmed milestone. It calls core IOTA API call: getBalances()
+        /// Confirmed balance of the given IOTA address based on the latest confirmed milestone
         /// </summary>
         /// <returns></returns>
         /// <response code="400">Incorect format of the address</response>
-        /// <response code="504">Result is not available at the moment</response>    
+        /// <response code="504">Result is not available at the moment</response>  
         [HttpGet("address/{address}/balance")]
         [CacheTangleResponse(
             LifeSpan = 10,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
-        [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.AddressWithBalances), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(AddressWithBalances), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Balance(string address)
@@ -193,7 +189,7 @@ namespace IOTAGears.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error occured in Balance controller");
+                _logger.LogError(e, "Error occured in " + nameof(Balance));
                 return StatusCode(504);
             }
 
@@ -201,7 +197,21 @@ namespace IOTAGears.Controllers
         }
 
         // POST api/tangle/address/sendtx
+
+        /// <summary>
+        /// Send non-value transaction to the given IOTA address. Message to be broadcasted should be in the request body
+        /// </summary>
+        /// <remarks>Transactions may not be sent immediately. All requests are added to a common pipeline which is being processed sequentially.
+        /// There is a parameter <code>NumberOfRequests</code> that indicates how many requests are in the pipeline (inclusive).</remarks>
+        /// <returns></returns>
+        /// <response code="400">Incorect format of the address</response>
+        /// <response code="504">Action could not be performed at the moment</response>  
+        /// <response code="429">Too many requests</response>  
         [HttpPost("address/{address}/sendtx")]
+        [ProducesResponseType(typeof(PipelineStatus), (int)HttpStatusCode.Accepted)]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.TooManyRequests)]
         public async Task<IActionResult> SendTX(string address, [FromBody] string message)
         {
             if (!CommonHelpers.IsValidAddress(address) || !ModelState.IsValid)
@@ -210,17 +220,22 @@ namespace IOTAGears.Controllers
             }
             
             PipelineStatus res;
-            //try
-            //{
+            try
+            {
                 res = await _repository.Api.AddTransactionToPipeline(address, message, Request);
-            //}
-            //catch (Exception e)
-            //{
-                //_logger.LogError(e, "Error occured in Balance controller");
-                //return StatusCode(504);
-            //}
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error occured in " + nameof(SendTX));
+                return StatusCode(504);
+            }
 
-            return Created("", value: res);
+            if (res.Status==StatusDetail.TooManyRequests) // too many requests
+            {
+                return StatusCode(429);
+            }
+
+            return Accepted(res);
         }
     }
 }

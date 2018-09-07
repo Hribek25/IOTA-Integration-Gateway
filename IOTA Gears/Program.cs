@@ -31,6 +31,8 @@ namespace IOTAGears
             else
             {
                 Console.WriteLine("DB layer is not ready. Halting...");
+                Console.WriteLine("Press any key to close");
+                Console.ReadKey();
             }
 
             Console.WriteLine("Program has been terminated...");
@@ -39,7 +41,6 @@ namespace IOTAGears
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .Build();
-                
+                .Build();                
     }
 }
