@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace IOTA_Gears
+namespace IOTAGears
 {
-    public class Program
+    public static class Program
     {
         public static string DBLayerDataSource() => 
             System.IO.Path.Combine(
@@ -18,10 +18,9 @@ namespace IOTA_Gears
                 "iotagears_pipeline.sqlite"
                 );
 
-        //public static string AppVersion() => 
-        //    Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
-
-
+        public static string AppVersion() =>
+            System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        
         public static void Main(string[] args)
         {
             if (DbLayer.IsDBLayerReady())

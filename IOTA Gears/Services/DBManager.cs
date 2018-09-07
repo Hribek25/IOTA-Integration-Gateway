@@ -8,19 +8,20 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
-using IOTA_Gears.EntityModels;
+using IOTAGears.EntityModels;
 
-namespace IOTA_Gears.Services
+namespace IOTAGears.Services
 {
     public interface IDBManager
     {
-        
+         SqliteConnection DBConnection { get; }         
     }
     
     public class DBManager : IDBManager, IDisposable
     {
         public SqliteConnection DBConnection { get; private set; }
         private ILogger<DBManager> Logger { get; set; }
+        private bool disposed = false;
 
         public DBManager(ILogger<DBManager> logger)
         {            
@@ -63,7 +64,7 @@ namespace IOTA_Gears.Services
         {
             if (identDelegate==null)
             {
-                throw new ArgumentNullException("identDelegate parameter can't be null.");
+                throw new ArgumentNullException(paramName: nameof(identDelegate));
             }
             
             DBConnection.Open();
@@ -92,9 +93,9 @@ namespace IOTA_Gears.Services
 
             Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call.Substring(0, 50));
         }
-        public async Task AddTaskEntryAsync(string task, object input, string ip, string guid)
+        public async Task AddTaskEntryAsync(string task, object input, string ip, string globaluid)
         {
-            var outputcmd = _AddTaskEntrySQL(task, input, ip, guid);
+            var outputcmd = _AddTaskEntrySQL(task, input, ip, globaluid);
 
             DBConnection.Open();
             await outputcmd.ExecuteNonQueryAsync();
@@ -170,7 +171,7 @@ namespace IOTA_Gears.Services
                             Input = (TaskEntryInput)DBSerializer.DeserializeFromJson((string)reader["input"]),
                             Task = (string)reader["task"],
                             Timestamp = (long)reader["timestamp"],
-                            GuId = (string)reader["guid"]
+                            GlobalId = (string)reader["guid"]
                         };
                         output.Add(entry);
                     }
@@ -251,7 +252,7 @@ namespace IOTA_Gears.Services
         {
             if (string.IsNullOrWhiteSpace(ident))
             {
-                throw new ArgumentNullException("Ident parameter can't be empty.");
+                throw new ArgumentNullException(paramName: nameof(ident));
             }
 
             var cmd = "DELETE FROM [partial_cache] WHERE [call]=@call and [ident]=@ident;" + Environment.NewLine;
@@ -278,7 +279,7 @@ namespace IOTA_Gears.Services
         {
             if (identDelegate==null)
             {
-                throw new ArgumentNullException("identDelegate parameter can't be null.");
+                throw new ArgumentNullException(paramName: nameof(identDelegate));
             }
 
             var commands = new List<SqliteCommand>();
@@ -359,8 +360,31 @@ namespace IOTA_Gears.Services
 
         public void Dispose()
         {
-            this.DBConnection.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                // If disposing equals true, dispose all managed
+                // and unmanaged resources.
+                if (disposing)
+                {
+                    // Dispose managed resources.
+                    this.DBConnection.Dispose();
+                }
+
+                // Call the appropriate methods to clean up
+                // unmanaged resources here.
+                // If disposing is false,
+                // only the following code is executed.
+                
+
+                // Note disposing has been done.
+                disposed = true;
+            }
+        }
     }
 }

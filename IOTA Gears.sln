@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2047
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IOTA Gears", "IOTA Gears\IOTA Gears.csproj", "{C126D12C-3E26-49CC-941E-13AEEDB58DB3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IOTAGears", "IOTA Gears\IOTAGears.csproj", "{C126D12C-3E26-49CC-941E-13AEEDB58DB3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

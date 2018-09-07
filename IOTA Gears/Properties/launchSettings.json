@@ -18,8 +18,7 @@
     },
     "IOTA_Gears": {
       "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "api/tangle/node/getnodeinfo",
+      "launchUrl": "api/tangle/address/DSZRO9TCIJIKZOKUPVNOJFKVAHFCKL9YMLPVZUAEVZPOFXLIUWLPRQWBMVVSFTKGMGPPHXCYE9MIZEVBXQNFYKYUA9/transactions/details",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

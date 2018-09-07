@@ -8,12 +8,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using IOTA_Gears.Services;
+using IOTAGears.Services;
 using Microsoft.Data.Sqlite;
 using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.Extensions.Hosting;
 
-namespace IOTA_Gears
+namespace IOTAGears
 {
     public class Startup
     {        
@@ -61,7 +61,8 @@ namespace IOTA_Gears
             // Background Tasks Service
             services.AddSingleton<IHostedService, TimedBackgroundService>();
         }
-
+        
+#pragma warning disable CA1822 // Member Configure does not access instance data and can be marked as static
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env)
         {
@@ -81,5 +82,6 @@ namespace IOTA_Gears
 
             app.UseMvc();
         }
+#pragma warning restore CA1822 // Member Configure does not access instance data and can be marked as static
     }
 }

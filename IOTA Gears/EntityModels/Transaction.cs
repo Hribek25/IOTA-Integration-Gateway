@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IOTA_Gears.EntityModels
+namespace IOTAGears.EntityModels
 {    
     public enum TransactionFilter
     {

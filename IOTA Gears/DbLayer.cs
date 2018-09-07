@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
-namespace IOTA_Gears
+namespace IOTAGears
 {
-    public class DbLayer
+    public static class DbLayer
     {
         private static bool IsValidDBLayer(SqliteConnection connection)
         {

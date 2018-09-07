@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Tangle.Net.Entity;
 
-namespace IOTA_Gears
+namespace IOTAGears
 {
     #region CustomizedJsonConverters
     // based on https://stackoverflow.com/a/23017892
@@ -238,7 +238,7 @@ namespace IOTA_Gears
 
     #endregion
 
-    public class DBSerializer
+    public static class DBSerializer
     {
         public static string SerializeToJson(object input)
         {

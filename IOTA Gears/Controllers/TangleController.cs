@@ -4,14 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Tangle.Net.Repository.DataTransfer;
-using IOTA_Gears.Services;
+using IOTAGears.Services;
 using Microsoft.Extensions.Logging;
-using IOTA_Gears.ActionFilters;
+using IOTAGears.ActionFilters;
 using System.Net;
-using IOTA_Gears.EntityModels;
+using IOTAGears.EntityModels;
 using System.Threading;
 
-namespace IOTA_Gears.Controllers
+namespace IOTAGears.Controllers
 {
     //[Route("api/[controller]/[action]")]
     [Route("api/[controller]")]

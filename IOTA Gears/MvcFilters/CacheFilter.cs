@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace IOTA_Gears.ActionFilters
+namespace IOTAGears.ActionFilters
 {
+    [System.AttributeUsage(System.AttributeTargets.All)]
     public class CacheTangleResponseAttribute : Attribute, IFilterFactory
     {
         public bool IsReusable => false;
-        public int LifeSpan = 300;
-        public int StatusCode = 200;
+        public int LifeSpan { get; set; } = 300;
+        public int StatusCode { get; set; } = 200;
 
         public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => new CacheFilter(logger: serviceProvider.GetService<ILoggerFactory>().CreateLogger<CacheFilter>())
         {
@@ -21,12 +22,12 @@ namespace IOTA_Gears.ActionFilters
             StatusCode = StatusCode
         };
 
-        public class CacheFilter : IAsyncResourceFilter
+        private class CacheFilter : IAsyncResourceFilter
         {
             public Services.DBManager DBManager { get; set; } = null;
             public int CacheLifeSpan { get; set; }
             public ILogger<CacheFilter> Logger { get; }
-            public int StatusCode = 200;
+            public int StatusCode { get; set; } = 200;
 
             private void GetThreadInfo()
             {

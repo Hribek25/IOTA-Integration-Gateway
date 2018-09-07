@@ -5,22 +5,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IOTA_Gears.Services
+namespace IOTAGears.Services
 {
     public interface INodeManager
     {
-        
+#pragma warning disable CA2227 // Collection properties should be read only
+         List<string> Nodes { get; set; }
+         List<string> StartupNodes { get; }
     }
 
     public class NodeManager : INodeManager
     {
         public List<string> Nodes { get; set; }
         public List<string> StartupNodes { get; }
+#pragma warning restore CA2227 // Collection properties should be read only
+
         private ILogger<NodeManager>  Logger { get; set; }
 
         public NodeManager(IConfiguration configuration, ILogger<NodeManager> logger)
         {
-            var nodes = (from i in configuration.AsEnumerable() where i.Key.StartsWith("IOTANodes:") select i.Value).ToList();
+            var nodes = (from i in configuration.AsEnumerable() where i.Key.StartsWith("IOTANodes:", System.StringComparison.InvariantCultureIgnoreCase) select i.Value).ToList();
             Nodes = nodes;
             StartupNodes = nodes;
 

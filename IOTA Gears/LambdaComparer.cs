@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IOTA_Gears
+namespace IOTAGears
 {
     public class LambdaComparer<T> : IEqualityComparer<T>
     {
@@ -19,8 +19,8 @@ namespace IOTA_Gears
 
         public LambdaComparer(Func<T, T, bool> lambdaComparer, Func<T, int> lambdaHash)
         {
-            _lambdaComparer = lambdaComparer ?? throw new ArgumentNullException("lambdaComparer");
-            _lambdaHash = lambdaHash ?? throw new ArgumentNullException("lambdaHash");
+            _lambdaComparer = lambdaComparer ?? throw new ArgumentNullException(nameof(lambdaComparer));
+            _lambdaHash = lambdaHash ?? throw new ArgumentNullException(nameof(lambdaHash));
         }
 
         public bool Equals(T x, T y)

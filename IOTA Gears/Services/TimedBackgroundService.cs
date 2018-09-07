@@ -11,9 +11,9 @@ using Tangle.Net.ProofOfWork.Service;
 using Tangle.Net.Repository;
 using Tangle.Net.Utils;
 
-namespace IOTA_Gears.Services
+namespace IOTAGears.Services
 {
-    internal class TimedBackgroundService : IHostedService, IDisposable    
+    public class TimedBackgroundService : IHostedService, IDisposable    
     {
         private readonly ILogger _logger;
         private readonly NodeManager _nodemanager;
@@ -22,11 +22,12 @@ namespace IOTA_Gears.Services
         private Timer _timerPipelineTasks = null;
         private bool HealthCheckingInProgress = false;
         private bool ProcessingTasksInProgress = false;
-        public bool ProcessingTasksActive = false;
+        public bool ProcessingTasksActive { get; set; } = false;
         private readonly TimeSpan ProcessingTaskInterval = TimeSpan.FromSeconds(15);
         private readonly TimeSpan HealthCheckingTaskInterval = TimeSpan.FromSeconds(180);
         private readonly object balanceLock = new object();
-        
+        private bool disposed = false;
+
         public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDBManager dbmanager)
         {
             _logger = logger;
@@ -71,7 +72,7 @@ namespace IOTA_Gears.Services
                             var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new PoWSrvService());
                             var bundle = new Bundle();
                             Bundle RetBundle = null;
-                            var guid = item.GuId;
+                            var guid = item.GlobalId;
                             var rowid = item.Rowid;
                             var seed = Seed.Random();
                             var input = item.Input;
@@ -190,8 +191,33 @@ namespace IOTA_Gears.Services
 
         public void Dispose()
         {
-            _timerHealthCheck?.Dispose();
-            _timerPipelineTasks.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                // If disposing equals true, dispose all managed
+                // and unmanaged resources.
+                if (disposing)
+                {
+                    // Dispose managed resources.
+                    _timerHealthCheck?.Dispose();
+                    _timerPipelineTasks.Dispose();
+                }
+
+                // Call the appropriate methods to clean up
+                // unmanaged resources here.
+                // If disposing is false,
+                // only the following code is executed.
+
+
+                // Note disposing has been done.
+                disposed = true;
+            }
+        }
+
     }
 }
