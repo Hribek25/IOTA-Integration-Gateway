@@ -1,4 +1,6 @@
 # IOTA Integration Gateway
+![Logo](https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/logo.png)
+
 I believe it is a vital to integrate IOTA protocol with business-related workflows that are available and used everyday.
 
 Integration platforms such as ifttt.com or O365 (ex. MS Flow) are used in many business-related use cases everyday and triggers/actions based on IOTA protocol would be very good addition to them. Needless to say, it will enable wide range of additional use cases based on thousands of  third-party components that are solid part of the integration platforms today. It may also serve as a gateway to business analytics tools such as Power BI, Power Query, etc.
