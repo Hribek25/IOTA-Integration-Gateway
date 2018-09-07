@@ -23,7 +23,7 @@ namespace IOTAGears.Services
         private bool HealthCheckingInProgress = false;
         private bool ProcessingTasksInProgress = false;
         public bool ProcessingTasksActive { get; set; } = false;
-        private readonly TimeSpan ProcessingTaskInterval = TimeSpan.FromSeconds(15);
+        private readonly TimeSpan ProcessingTaskInterval = TimeSpan.FromSeconds(6); // task is processed every 6 seconds
         private readonly TimeSpan HealthCheckingTaskInterval = TimeSpan.FromSeconds(180);
         private readonly object balanceLock = new object();
         private bool disposed = false;
@@ -66,10 +66,11 @@ namespace IOTAGears.Services
                     if (item.Task == "SendTX")
                     {
                         var actualnode = this._nodemanager.SelectNode();
+                        var actualPOWnode = this._nodemanager.SelectPOWNode();
                         // TODO: select also POW service and potential failover
-                        if (actualnode != null)
+                        if (actualnode != null && actualPOWnode !=null)
                         {
-                            var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new PoWSrvService());
+                            var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new POWService(actualPOWnode));
                             var bundle = new Bundle();
                             Bundle RetBundle = null;
                             var guid = item.GlobalId;
@@ -132,6 +133,7 @@ namespace IOTAGears.Services
             this.HealthCheckingInProgress = true; // basic semaphore
             _logger.LogInformation("Background Task: Health Check of nodes... Starting");
 
+            // general purpose nodes
             var Status = this._nodemanager.PerformHealthCheck(); //Performing health check
             var HealthyOnes = (from n in Status where n.Value == true select n.Key).ToList();
             this._nodemanager.Nodes = HealthyOnes;
@@ -139,6 +141,16 @@ namespace IOTAGears.Services
             if (HealthyOnes.Count==0)
             {
                 _logger.LogError("All nodes down!");
+            }
+
+            // POW nodes
+            Status = this._nodemanager.PerformPOWHealthCheck(); //Performing health check of POW nodes
+            HealthyOnes = (from n in Status where n.Value == true select n.Key).ToList();
+            this._nodemanager.POWNodes = HealthyOnes;
+
+            if (HealthyOnes.Count == 0)
+            {
+                _logger.LogError("All POW nodes down!");
             }
 
             _logger.LogInformation("Background Task: Health Check of nodes... Ending");

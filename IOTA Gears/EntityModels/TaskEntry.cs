@@ -22,6 +22,7 @@ namespace IOTAGears.EntityModels
         public StatusDetail Status { get; set; }
 
         public string GlobalId { get; set; }
+        public Int64 NumberOfRequests { get; set; } = -1;
     }
 
     public enum StatusDetail

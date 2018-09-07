@@ -22,6 +22,8 @@ namespace IOTAGears.Services
         public SqliteConnection DBConnection { get; private set; }
         private ILogger<DBManager> Logger { get; set; }
         private bool disposed = false;
+        private readonly int AbuseTimeInterval = 60; // interval (number of seconds) to check an abuse usage
+        private readonly int AbuseCount = 3; // max number of requests from the same IP within the AbuseTimeInterval
 
         public DBManager(ILogger<DBManager> logger)
         {            
@@ -93,15 +95,27 @@ namespace IOTAGears.Services
 
             Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call.Substring(0, 50));
         }
-        public async Task AddTaskEntryAsync(string task, object input, string ip, string globaluid)
+        public async Task<Int64> AddTaskEntryAsync(string task, object input, string ip, string globaluid)
         {
             var outputcmd = _AddTaskEntrySQL(task, input, ip, globaluid);
-
+            var numberoftaskscmd = _GetNumberOfTasksInPipelineSQL();
+            var abusecheckcmd = _GetNumberOfTasksFromSameIpSQL(ip);
+            
             DBConnection.Open();
-            await outputcmd.ExecuteNonQueryAsync();
+            var checkcount = (Int64)(await abusecheckcmd.ExecuteScalarAsync());
+            // Logger.LogInformation("Task pipeline (ADD) for an individual element. Abuse check returned {checkcount}", checkcount);
+
+            Int64 res=-1;
+            if (checkcount<=AbuseCount) //no abuse usage - let's add it to the pipe line
+            {
+                await outputcmd.ExecuteNonQueryAsync();
+                res = (Int64)(await numberoftaskscmd.ExecuteScalarAsync()); // at least 0
+            }
+                        
             DBConnection.Close();
 
             Logger.LogInformation("Task pipeline (ADD) for an individual element. {input.GetType()} object was saved for the task {task}.", input.GetType(), task);
+            return res; // returning -1 in case of abuse usage
         }
 
         public async Task<List<object>> GetPartialCacheEntriesAsync(string call)
@@ -247,7 +261,31 @@ namespace IOTAGears.Services
             );
             return c;
         }
+
+
+        private SqliteCommand _GetNumberOfTasksInPipelineSQL()
+        {
+            var cmd = "SELECT COUNT(*) FROM [task_pipeline] WHERE performed=0;";
+            var c = DBConnection.CreateCommand();
+            c.CommandText = cmd;            
+            return c;
+        }
         
+        private SqliteCommand _GetNumberOfTasksFromSameIpSQL(string ip)
+        {
+            var cmd = "SELECT COUNT(*) FROM [task_pipeline] WHERE ip=@ip and [timestamp]>=(cast(strftime('%s','now') as bigint)-@abuseinterval);";
+            var c = DBConnection.CreateCommand();
+            c.CommandText = cmd;
+            c.Parameters.AddRange(
+                new List<SqliteParameter>()
+                {
+                    new SqliteParameter("@ip", ip),
+                    new SqliteParameter("@abuseinterval", AbuseTimeInterval)
+                }
+            );
+            return c;
+        }
+
         private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
         {
             if (string.IsNullOrWhiteSpace(ident))
@@ -373,7 +411,7 @@ namespace IOTAGears.Services
                 if (disposing)
                 {
                     // Dispose managed resources.
-                    this.DBConnection.Dispose();
+                    this.DBConnection?.Dispose();
                 }
 
                 // Call the appropriate methods to clean up

@@ -18,6 +18,9 @@ namespace IOTAGears.Services
     {
         public List<string> Nodes { get; set; }
         public List<string> StartupNodes { get; }
+        public List<string> POWStartupNodes { get; }
+        public List<string> POWNodes { get; set; }
+
 #pragma warning restore CA2227 // Collection properties should be read only
 
         private ILogger<NodeManager>  Logger { get; set; }
@@ -25,8 +28,13 @@ namespace IOTAGears.Services
         public NodeManager(IConfiguration configuration, ILogger<NodeManager> logger)
         {
             var nodes = (from i in configuration.AsEnumerable() where i.Key.StartsWith("IOTANodes:", System.StringComparison.InvariantCultureIgnoreCase) select i.Value).ToList();
+            var pownodes = (from i in configuration.AsEnumerable() where i.Key.StartsWith("POWnodes:", System.StringComparison.InvariantCultureIgnoreCase) select i.Value).ToList();
+
             Nodes = nodes;
+            POWNodes = pownodes;
+
             StartupNodes = nodes;
+            POWStartupNodes = pownodes;
 
             Logger = logger;
 
@@ -34,11 +42,44 @@ namespace IOTAGears.Services
             {
                 Logger.LogInformation("NodeManager initialized...");
                 Logger.LogInformation("Using the following nodes: {nodes}", Nodes);
+                Logger.LogInformation("Using the following POW nodes: {pownodes}", pownodes);
             }            
         }
 
+        public Dictionary<string, bool> PerformPOWHealthCheck()
+        {
+            // health check of POW nodes
+            if (Logger != null)
+            {
+                Logger.LogInformation("Performing health check of POW NODES...");
+            }
+
+            var stats = new Dictionary<string, bool>();            
+            foreach (var node in this.POWStartupNodes) // always starts with all original nodes
+            {
+                var client = new RestSharp.RestClient(node) { Timeout = 1000 };
+                var request = new RestSharp.RestRequest(node, RestSharp.Method.POST);
+                request.AddJsonBody(new { command = "attachToTangle" });
+                var resp = client.Execute(request);               
+
+                if (resp.ResponseStatus==RestSharp.ResponseStatus.Completed && resp.StatusCode==System.Net.HttpStatusCode.BadRequest)
+                {
+                    stats.Add(node, true);
+                    Logger.LogInformation("POW node {node} is healthy!", node);
+                }
+                else
+                {
+                    Logger.LogInformation("Error while checking POW node {node}. Error: {resp.StatusDescription}", resp.StatusDescription);
+                    stats.Add(node, false);
+                }
+            }            
+            return stats;
+        }
+
+
         public Dictionary<string, bool> PerformHealthCheck()
         {
+            // health check of general purpose nodes
             if (Logger != null)
             {
                 Logger.LogInformation("Performing health check of NODES...");
@@ -98,7 +139,15 @@ namespace IOTAGears.Services
             if (nct == 0) { return null; }
 
             return Nodes[new Random().Next(0, nct)]; // random node to be used ATM
-        }       
+        }
+
+        public string SelectPOWNode()
+        {
+            var nct = POWNodes.Count;
+            if (nct == 0) { return null; }
+
+            return POWNodes[new Random().Next(0, nct)]; // random POW node to be used ATM
+        }
 
     }
 

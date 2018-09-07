@@ -339,18 +339,24 @@ namespace IOTAGears.Services
         public async Task<PipelineStatus> AddTransactionToPipeline(string address, string message, HttpRequest request)
         {
             var task = "SendTX";
-            var guid = System.Guid.NewGuid().ToString(); // unique ID of the task
+            var guid = Guid.NewGuid().ToString(); // unique ID of the task
             var ip = request.HttpContext.Connection.RemoteIpAddress.ToString();
-
+            
             // todo: abuse check 
 
-            await _DB.AddTaskEntryAsync(task, new TaskEntryInput() { Address = address, Message = message, Tag = "IO9GATEWAY9NET" }, ip, guid); //save the given prepared budndle to the pipeline
+            var numberTasks = await _DB.AddTaskEntryAsync(task, new TaskEntryInput() { Address = address, Message = message, Tag = "IO9GATEWAY9NET" }, ip, guid); //save the given prepared bundle to the pipeline
+            if (numberTasks<0)
+            {
+                _Logger.LogInformation("Abuse usage in affect. IP: {ip}", ip);
+                return new PipelineStatus() { Status = StatusDetail.TooManyRequests }; // returning
+            }
+
             if (!_TimedBackgroundService.ProcessingTasksActive)
             { // start processing pipeline
                 _TimedBackgroundService.StartProcessingPipeline();
             }
 
-            return new PipelineStatus() { Status = StatusDetail.TaskWasAddedToPipeline, GlobalId = guid };
+            return new PipelineStatus() { Status = StatusDetail.TaskWasAddedToPipeline, GlobalId = guid, NumberOfRequests=numberTasks };
         }
 
     }
