@@ -34,7 +34,7 @@ namespace IOTAGears.Services
 
         public async Task<JsonResult> GetCacheEntryAsync(string request, string contentType, int LifeSpan)
         {
-            SqliteCommand c = _GetCacheEntrySQL(request, contentType, LifeSpan);
+            SqliteCommand c = _GetCacheEntrySQL(request.ToUpperInvariant(), contentType, LifeSpan);
             DBConnection.Open();
 
             JsonResult cacheEntry = null; // default return value
@@ -54,7 +54,7 @@ namespace IOTAGears.Services
         }
         public async Task AddCacheEntryAsync(string request, JsonResult result, string contentType)
         {
-            SqliteCommand c = _AddCacheEntrySQL(request, result, contentType);
+            SqliteCommand c = _AddCacheEntrySQL(request.ToUpperInvariant(), result, contentType);
 
             DBConnection.Open();
             await c.ExecuteNonQueryAsync();
@@ -74,7 +74,7 @@ namespace IOTAGears.Services
             var cnt = 0;
             using (var tr = DBConnection.BeginTransaction())
             {                
-                foreach (var i in _AddPartialCacheOutputEntriesSQL(call, results, identDelegate, EntityTimestampDelegate))
+                foreach (var i in _AddPartialCacheOutputEntriesSQL(call.ToUpperInvariant(), results, identDelegate, EntityTimestampDelegate))
                 {
                     i.Transaction = tr;
                     await i.ExecuteNonQueryAsync();
@@ -87,7 +87,7 @@ namespace IOTAGears.Services
         }
         public async Task AddPartialCacheEntryAsync(string call, string ident, long timestamp, object result)
         {
-            var outputcmd = _AddPartialCacheOutputEntrySQL(call, ident, timestamp, result);
+            var outputcmd = _AddPartialCacheOutputEntrySQL(call.ToUpperInvariant(), ident, timestamp, result);
 
             DBConnection.Open();
             await outputcmd.ExecuteNonQueryAsync();
@@ -97,7 +97,7 @@ namespace IOTAGears.Services
         }
         public async Task<Int64> AddTaskEntryAsync(string task, object input, string ip, string globaluid)
         {
-            var outputcmd = _AddTaskEntrySQL(task, input, ip, globaluid);
+            var outputcmd = _AddTaskEntrySQL(task.ToUpperInvariant(), input, ip, globaluid);
             var numberoftaskscmd = _GetNumberOfTasksInPipelineSQL();
             var abusecheckcmd = _GetNumberOfTasksFromSameIpSQL(ip);
             
@@ -120,7 +120,7 @@ namespace IOTAGears.Services
 
         public async Task<List<object>> GetPartialCacheEntriesAsync(string call)
         {
-            var outputcmd = _GetPartialCacheOutputEntrySQL(call);
+            var outputcmd = _GetPartialCacheOutputEntrySQL(call.ToUpperInvariant());
 
             DBConnection.Open();
 
@@ -146,7 +146,7 @@ namespace IOTAGears.Services
         }
         public async Task<object> GetPartialCacheEntryAsync(string call)
         {
-            var outputcmd = _GetPartialCacheOutputEntrySQL(call);
+            var outputcmd = _GetPartialCacheOutputEntrySQL(call.ToUpperInvariant());
 
             DBConnection.Open();
 
