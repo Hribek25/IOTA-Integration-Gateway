@@ -12,8 +12,7 @@ using IOTAGears.EntityModels;
 using System.Threading;
 
 namespace IOTAGears.Controllers
-{
-    //[Route("api/[controller]/[action]")]
+{    
     [Route("api/[controller]")]
     public class TangleController : Controller
     {
@@ -34,38 +33,6 @@ namespace IOTAGears.Controllers
             _logger.LogDebug("Available AsyncIOThreads: {availableAsyncIOThreads}, Available Worker Threads: {availableWorkerThreads}", availableWorkerThreads, availableAsyncIOThreads); 
         }
         
-
-        // GET api/tangle/getnodeinfo
-        /// <summary>
-        /// Basic summary of an IOTA node and its status
-        /// </summary>
-        /// <returns></returns>
-        /// <response code="504">Result is not available at the moment</response>    
-        [HttpGet("node/[action]")]
-        [CacheTangleResponse(
-            LifeSpan = 20,
-            StatusCode = (int)HttpStatusCode.OK)
-            ]
-        [Produces("application/javascript")]
-        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
-        [ProducesResponseType(typeof(NodeInfo), (int)HttpStatusCode.OK)]
-        public async Task<IActionResult> GetNodeInfo()
-        {
-            NodeInfo res;
-            try
-            {
-                res = await _repository.Api.GetNodeInfoAsync();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error occured in " + nameof(GetNodeInfo));
-                return StatusCode(504); // return 404 error
-            }            
-            return Json(res); // Format the output
-        }
-
-
-
         // GET api/tangle/address/transactions
         /// <summary>
         /// All transaction hashes related to the given IOTA address
