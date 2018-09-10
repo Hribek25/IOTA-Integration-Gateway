@@ -60,8 +60,19 @@ namespace IOTAGears
 
             // Background Tasks Service
             services.AddSingleton<IHostedService, TimedBackgroundService>();
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAllOrigins",
+                    builder => builder
+                                .AllowAnyOrigin()
+                                .AllowAnyMethod()
+                                .AllowAnyHeader()
+                    );
+            });
+
         }
-        
+
 #pragma warning disable CA1822 // Member Configure does not access instance data and can be marked as static
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env)
@@ -77,12 +88,13 @@ namespace IOTAGears
             // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), 
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "IOTA Gateway API");
+                c.SwaggerEndpoint(Program.SwaggerJSONFile(), "IOTA Gateway API");
                 c.RoutePrefix = "docs";
                 c.DocumentTitle = "IOTA Gateway API Documentation";
                 c.DocExpansion(DocExpansion.None);
-
             });
+
+            app.UseCors("AllowAllOrigins");
 
             app.UseMvc();
         }
