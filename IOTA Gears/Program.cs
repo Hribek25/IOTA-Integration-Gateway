@@ -20,7 +20,10 @@ namespace IOTAGears
 
         public static string AppVersion() =>
             System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-        
+
+        public static string SwaggerJSONFile() => "/swagger/v1/swagger.json";
+
+
         public static void Main(string[] args)
         {
             if (DbLayer.IsDBLayerReady())
