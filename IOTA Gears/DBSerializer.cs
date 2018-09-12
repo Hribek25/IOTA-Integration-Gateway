@@ -244,7 +244,6 @@ namespace IOTAGears
         {
             var settings = new JsonSerializerSettings()
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.All,
                 TypeNameHandling = TypeNameHandling.All
             };
             
@@ -262,7 +261,6 @@ namespace IOTAGears
         {
             var settings = new JsonSerializerSettings()
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.All,
                 TypeNameHandling = TypeNameHandling.All
             };
 
