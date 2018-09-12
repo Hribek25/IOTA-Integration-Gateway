@@ -35,6 +35,23 @@ namespace IOTAGears.EntityModels
             // default ctor because of deserialization
         }
 
+        private static bool IsPrintableMessage(string message)
+        {
+            byte[] encodedBytes = System.Text.Encoding.UTF8.GetBytes(message);
+
+            bool printable = true;
+            for (int ctr = 0; ctr < encodedBytes.Length; ctr++)
+            {
+                if (encodedBytes[ctr]<32)
+                {
+                    printable = false;
+                    break;
+                }                 
+            }
+
+            return printable;
+        }
+
         public TransactionContainer(Tangle.Net.Entity.Transaction transaction)
         {
             Transaction = transaction;
@@ -42,6 +59,10 @@ namespace IOTAGears.EntityModels
             try
             {
                 this.DecodedMessage = !Transaction.Fragment.IsEmpty ? Transaction.Fragment.ToUtf8String() : null;
+                if (DecodedMessage!=null && !TransactionContainer.IsPrintableMessage(DecodedMessage))
+                {
+                    DecodedMessage = null;
+                }
             }
             catch (Exception)
             {
