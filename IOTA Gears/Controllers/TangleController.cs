@@ -92,7 +92,7 @@ namespace IOTAGears.Controllers
         [ProducesResponseType(typeof(TransactionHashList), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> TransactionsByBundle(string hash)
         {
-            if (!CommonHelpers.IsValidAddress(hash))
+            if (!CommonHelpers.IsValidHash(hash))
             {
                 return BadRequest(); //return 400 error
             }
@@ -164,7 +164,6 @@ namespace IOTAGears.Controllers
         }
 
 
-        // GET api/tangle/bundle/transactions/details
         /// <summary>
         /// All transactions including all details related to the given bundle
         /// </summary>
@@ -186,7 +185,7 @@ namespace IOTAGears.Controllers
         public async Task<IActionResult> TransactionDetailsByBundle(string hash, TransactionFilter filter)
 #pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         {
-            if (!CommonHelpers.IsValidAddress(hash))
+            if (!CommonHelpers.IsValidHash(hash))
             {
                 return BadRequest(); //return 400 error
             }
@@ -271,7 +270,7 @@ namespace IOTAGears.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> TransactionDetailsByHash(string hash)
         {
-            if (!CommonHelpers.IsValidAddress(hash))
+            if (!CommonHelpers.IsValidHash(hash))
             {
                 return BadRequest(); //return 400
             }
