@@ -65,7 +65,8 @@ namespace IOTAGears.Controllers
         [ProducesResponseType(typeof(NodeTree), (int)HttpStatusCode.OK)]        
         public IActionResult ApiMapCalls()
         {
-            var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
+            // var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
+            var TargetURL = Program.DefaultPublicFacingHttpProtocol() + Request.Host.ToString() + Program.SwaggerJsonFile(); // TODO: Move the method to conf file
             var client = new RestSharp.RestClient(TargetURL) { Timeout = 2000 };
             var resp = client.Execute(new RestSharp.RestRequest(TargetURL, RestSharp.Method.GET));
 

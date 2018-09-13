@@ -13,5 +13,6 @@ namespace IOTAGears
 
         public static bool IsValidHash(string hash) =>
             Regex.IsMatch(hash, @"^([A-Z9]{81})$");
+        
     }
 }

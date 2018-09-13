@@ -88,7 +88,7 @@ namespace IOTAGears
             // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), 
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint(Program.SwaggerJSONFile(), "IOTA Gateway API");
+                c.SwaggerEndpoint(Program.SwaggerJsonFile(), "IOTA Gateway API");
                 c.RoutePrefix = "docs";
                 c.DocumentTitle = "IOTA Gateway API Documentation";
                 c.DocExpansion(DocExpansion.None);
