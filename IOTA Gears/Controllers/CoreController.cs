@@ -21,10 +21,10 @@ namespace IOTAGears.Controllers
     public class CoreController : Controller
     {
         private readonly TangleRepository _repository;
-        private readonly ILogger<TangleController> _logger;
+        private readonly ILogger<CoreController> _logger;
         
         //CTOR
-        public CoreController(ITangleRepository repo, ILogger<TangleController> logger) // dependency injection
+        public CoreController(ITangleRepository repo, ILogger<CoreController> logger) // dependency injection
         {
             _repository = (TangleRepository)repo;
             _logger = logger;
@@ -67,6 +67,8 @@ namespace IOTAGears.Controllers
         {
             // var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
             var TargetURL = Program.DefaultPublicFacingHttpProtocol() + Request.Host.ToString() + Program.SwaggerJsonFile(); // TODO: Move the method to conf file
+            _logger.LogInformation("Trying to get API definition from {TargetURL}", TargetURL);
+
             var client = new RestSharp.RestClient(TargetURL) { Timeout = 2000 };
             var resp = client.Execute(new RestSharp.RestRequest(TargetURL, RestSharp.Method.GET));
 
