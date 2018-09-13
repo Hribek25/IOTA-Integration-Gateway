@@ -23,9 +23,6 @@ namespace IOTAGears
 
         public static string SwaggerJsonFile() => "/swagger/v1/swagger.json";
 
-        public static string DefaultPublicFacingHttpProtocol() => "https://";
-
-
         public static void Main(string[] args)
         {
             if (DbLayer.IsDBLayerReady())

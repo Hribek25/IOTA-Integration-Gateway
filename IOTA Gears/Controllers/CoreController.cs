@@ -14,21 +14,22 @@ using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
 using RestSharp;
 using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Configuration;
 
 namespace IOTAGears.Controllers
 {    
     [Route("api/[controller]")]
     public class CoreController : Controller
     {
-        private readonly TangleRepository _repository;
-        private readonly ILogger<CoreController> _logger;
+        private readonly Logger<CoreController> _logger;
+        private readonly IConfiguration _conf;
         
         //CTOR
-        public CoreController(ITangleRepository repo, ILogger<CoreController> logger) // dependency injection
+        public CoreController(ILogger<CoreController> logger, IConfiguration configuration) // dependency injection
         {
-            _repository = (TangleRepository)repo;
-            _logger = logger;
-            
+            //_repository = (TangleRepository)repo;
+            _logger = (Logger <CoreController>)logger;
+            _conf = configuration;            
         }
         //CTOR
         
@@ -66,7 +67,9 @@ namespace IOTAGears.Controllers
         public IActionResult ApiMapCalls()
         {
             // var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
-            var TargetURL = Program.DefaultPublicFacingHttpProtocol() + Request.Host.ToString() + Program.SwaggerJsonFile(); // TODO: Move the method to conf file
+            var basePath = _conf.GetValue<string>("DefaultPublicFacingHttpUrl", Request.Scheme + "://" + Request.Host.ToString());
+            var TargetURL = basePath + Program.SwaggerJsonFile(); 
+
             _logger.LogInformation("Trying to get API definition from {TargetURL}", TargetURL);
 
             var client = new RestSharp.RestClient(TargetURL) { Timeout = 2000 };
