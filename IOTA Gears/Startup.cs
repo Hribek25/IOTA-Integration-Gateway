@@ -75,7 +75,7 @@ namespace IOTAGears
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders =
-                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto ;
             });
             
         }
@@ -88,8 +88,6 @@ namespace IOTAGears
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.UseForwardedHeaders(); // I assume it is placed behind the proxy
 
             // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
@@ -104,6 +102,8 @@ namespace IOTAGears
             });
 
             app.UseCors("AllowAllOrigins");
+
+            app.UseForwardedHeaders(); // I assume it is placed behind the proxy
 
             app.UseMvc();
         }

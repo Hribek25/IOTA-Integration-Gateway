@@ -58,6 +58,7 @@ namespace IOTAGears.Controllers
         /// Summary of avaiable API calls in a structured format
         /// </summary>
         /// <returns></returns>        
+        [HttpGet()]
         [CacheTangleResponse(
             LifeSpan = 86000,
             StatusCode = (int)HttpStatusCode.OK)
