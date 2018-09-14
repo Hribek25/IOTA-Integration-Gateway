@@ -12,6 +12,7 @@ using IOTAGears.Services;
 using Microsoft.Data.Sqlite;
 using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace IOTAGears
 {
@@ -70,7 +71,13 @@ namespace IOTAGears
                                 .AllowAnyHeader()
                     );
             });
-
+            
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+            });
+            
         }
 
 #pragma warning disable CA1822 // Member Configure does not access instance data and can be marked as static
@@ -81,6 +88,8 @@ namespace IOTAGears
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            app.UseForwardedHeaders(); // I assume it is placed behind the proxy
 
             // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
