@@ -18,7 +18,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace IOTAGears.Controllers
 {    
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     public class CoreController : Controller
     {
         private readonly Logger<CoreController> _logger;
@@ -32,13 +32,14 @@ namespace IOTAGears.Controllers
             _conf = configuration;            
         }
         //CTOR
-        
+
         // GET api/core/status
         /// <summary>
         /// Gateway status
         /// </summary>
         /// <returns></returns>        
-        [HttpGet("[action]")]
+        [HttpHead()]
+        [HttpGet()]
         [CacheTangleResponse(
             LifeSpan = 30,
             StatusCode = (int)HttpStatusCode.OK)
@@ -57,7 +58,6 @@ namespace IOTAGears.Controllers
         /// Summary of avaiable API calls in a structured format
         /// </summary>
         /// <returns></returns>        
-        [HttpGet("[action]")]
         [CacheTangleResponse(
             LifeSpan = 86000,
             StatusCode = (int)HttpStatusCode.OK)
