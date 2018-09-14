@@ -17,13 +17,13 @@ namespace IOTAGears.Controllers
     public class NodeController : Controller
     {
         private readonly TangleRepository _repository;
-        private readonly ILogger<NodeController> _logger;
+        private readonly Logger<NodeController> _logger;
 
         //CTOR
         public NodeController(ITangleRepository repo, ILogger<NodeController> logger) // dependency injection
         {
             _repository = (TangleRepository)repo;
-            _logger = logger;
+            _logger = (Logger<NodeController>)logger;
         }
         //CTOR
         

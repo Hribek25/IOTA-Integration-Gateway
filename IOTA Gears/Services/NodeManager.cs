@@ -23,7 +23,7 @@ namespace IOTAGears.Services
 
 #pragma warning restore CA2227 // Collection properties should be read only
 
-        private ILogger<NodeManager>  Logger { get; set; }
+        private Logger<NodeManager>  Logger { get; set; }
 
         public NodeManager(IConfiguration configuration, ILogger<NodeManager> logger)
         {
@@ -36,7 +36,7 @@ namespace IOTAGears.Services
             StartupNodes = nodes;
             POWStartupNodes = pownodes;
 
-            Logger = logger;
+            Logger = (Logger<NodeManager>)logger;
 
             if (Logger!=null)
             {

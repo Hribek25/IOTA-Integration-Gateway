@@ -22,7 +22,7 @@ namespace IOTAGears.Services
         ApiTasks Api { get; }
         NodeManager NodeManager { get; }
         DBManager DB { get; }
-        ILogger<TangleRepository> Logger { get; }
+        Logger<TangleRepository> Logger { get; }
         TimedBackgroundService TimedBackgroundService { get; }
         string ActualNodeServer { get; }
     }
@@ -32,13 +32,13 @@ namespace IOTAGears.Services
         public ApiTasks Api { get; }
         public NodeManager NodeManager { get;  }
         public DBManager DB { get; }
-        public ILogger<TangleRepository> Logger { get;  }
+        public Logger<TangleRepository> Logger { get;  }
         public TimedBackgroundService TimedBackgroundService { get; }
         public string ActualNodeServer { get; }
         
         public TangleRepository(ILogger<TangleRepository> logger, INodeManager nodemanager, IDBManager dBManager, IHostedService timedbackgroundservice) {
             NodeManager = (NodeManager)nodemanager;
-            Logger = logger;
+            Logger = (Logger<TangleRepository>)logger;
             DB = (DBManager)dBManager;
             TimedBackgroundService = (TimedBackgroundService)timedbackgroundservice;
 
@@ -64,7 +64,7 @@ namespace IOTAGears.Services
     {
         private RestIotaRepository _repo { get; }
         private DBManager _DB { get; }
-        private ILogger<TangleRepository> _Logger { get; }
+        private Logger<TangleRepository> _Logger { get; }
         private string _ActualNodeServer { get; }
         private TimedBackgroundService _TimedBackgroundService { get; }
 

@@ -20,14 +20,14 @@ namespace IOTAGears.Services
     public class DBManager : IDBManager, IDisposable
     {
         public SqliteConnection DBConnection { get; private set; }
-        private ILogger<DBManager> Logger { get; set; }
+        private Logger<DBManager> Logger { get; set; }
         private bool disposed = false;
         private readonly int AbuseTimeInterval = 60; // interval (number of seconds) to check an abuse usage
         private readonly int AbuseCount = 3; // max number of requests from the same IP within the AbuseTimeInterval
 
         public DBManager(ILogger<DBManager> logger)
         {            
-            Logger = logger;
+            Logger = (Logger<DBManager>)logger;
             DBConnection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString);
             Logger.LogInformation("DB storage initiated and ready... Using file: {DBConnection.DataSource}", DBConnection.DataSource);            
         }

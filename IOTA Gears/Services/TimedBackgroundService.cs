@@ -15,7 +15,7 @@ namespace IOTAGears.Services
 {
     public class TimedBackgroundService : IHostedService, IDisposable    
     {
-        private readonly ILogger _logger;
+        private readonly Logger<TimedBackgroundService> _logger;
         private readonly NodeManager _nodemanager;
         private readonly DBManager _db;
         private Timer _timerHealthCheck;
@@ -30,7 +30,7 @@ namespace IOTAGears.Services
 
         public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDBManager dbmanager)
         {
-            _logger = logger;
+            _logger = (Logger<TimedBackgroundService>)logger;
             _nodemanager = (NodeManager)nodemanager;
             _db = (DBManager)dbmanager;
             _logger.LogInformation("Background Service initialized.");
