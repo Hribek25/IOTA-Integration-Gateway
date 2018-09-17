@@ -63,11 +63,21 @@ namespace IOTAGears.Services
                 bool ErrorOccurred = false;
                 foreach (var item in tasks)
                 {
-                    if (item.Task == "SendTX")
+                    if (item.Task == "SENDTX") // has to be all uppercase
                     {
                         var actualnode = this._nodemanager.SelectNode();
                         var actualPOWnode = this._nodemanager.SelectPOWNode();
                         // TODO: select also POW service and potential failover
+
+                        if (actualPOWnode==null) //if no POW server then using the same node as for TIPS selection, etc.
+                        {
+                            actualPOWnode = actualnode;
+                            if (actualPOWnode!=null)
+                            {
+                                _logger.LogInformation("No POW server. Using the standard one... Actual node: {actualnode}", actualnode);
+                            }                            
+                        }                        
+
                         if (actualnode != null && actualPOWnode !=null)
                         {
                             var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new POWService(actualPOWnode));
@@ -112,6 +122,10 @@ namespace IOTAGears.Services
                                 _db.UpdateTaskEntryInPipeline(rowid, 200, RetBundle.Hash.Value).Wait();                                
                             }
                         }
+                        else
+                        {
+                            _logger.LogInformation("No nodes via which to send TX. Skipping it for the current cycle...");
+                        }
                     }
                 }
             }
@@ -143,7 +157,7 @@ namespace IOTAGears.Services
                 _logger.LogError("All nodes down!");
             }
 
-            // POW nodes
+            // POW nodes. Checking it via OPTIONS.
             Status = this._nodemanager.PerformPOWHealthCheck(); //Performing health check of POW nodes
             HealthyOnes = (from n in Status where n.Value == true select n.Key).ToList();
             this._nodemanager.POWNodes = HealthyOnes;
