@@ -105,5 +105,65 @@ namespace IOTAGears.Controllers
             }
             return StatusCode(500);
         }
+
+
+#if DEBUG
+        [HttpGet()]
+        public IActionResult PerformSelfTest()
+        {
+            // var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
+            var basePath = _conf.GetValue<string>("DefaultPublicFacingHttpUrl", Request.Scheme + "://" + Request.Host.ToString());
+            var TargetURL = basePath + Program.SwaggerJsonFile();
+            var Address = "CYJV9DRIE9NCQJYLOYOJOGKQGOOELTWXVWUYGQSWCNODHJAHACADUAAHQ9ODUICCESOIVZABA9LTMM9RW";
+            var BundleHash = "TXGCKHFQPOYLN9BZNLXEKAGVGSRGHHUJUQTRYKJLAHTHUBEBQSBUXGOASFOI9KTUIURHODX9HZFSIHANX";
+            var TXHash = "JYSCFGQDBICFTJKQTRSPOJNCJ9IBAONHTSAQVVYIZVHLVEKGCLLWA9NPQWEEUOBGSHOXKDQSCIVTZ9999";
+
+            _logger.LogInformation("Trying to get API definition from {TargetURL}", TargetURL);
+
+            var client = new RestSharp.RestClient(TargetURL) { Timeout = 2000 };
+            var resp = client.Execute(new RestSharp.RestRequest(TargetURL, RestSharp.Method.GET));
+            
+            if (resp.IsSuccessful && resp.StatusCode == HttpStatusCode.OK)
+            {
+                // Getting list of all get procedures
+                var Source = JsonConvert.DeserializeObject<JObject>(resp.Content);
+                var TestClient = new RestSharp.RestClient(basePath) { Timeout = 10000 };
+
+                var TestResults = new List<SelfTestResult>();
+                var ApiCalls = (from item in Source["paths"]
+                               from v in item.Values()
+                               where (v as JProperty).Name == "get"
+                               select (item as JProperty).Name).ToList();
+
+                foreach (var item in ApiCalls) // let's cycle thru all API paths
+                {
+                    var ApiCall = item;
+                    if (ApiCall.Contains("bundle", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        ApiCall = ApiCall.Replace("{hash}", BundleHash, StringComparison.InvariantCultureIgnoreCase);
+                    }
+                    if (ApiCall.Contains("transaction", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        ApiCall = ApiCall.Replace("{hash}", TXHash, StringComparison.InvariantCultureIgnoreCase);
+                    }
+                    ApiCall = ApiCall.Replace("{address}", Address, StringComparison.InvariantCultureIgnoreCase);
+                    ApiCall = basePath + ApiCall;
+
+                    if (!ApiCall.Contains(nameof(PerformSelfTest),StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        var result = TestClient.Execute(new RestSharp.RestRequest(ApiCall, RestSharp.Method.GET));
+                        TestResults.Add(new SelfTestResult() { ApiCall = ApiCall, StatusCode = (int)result.StatusCode });
+                        if ((int)result.StatusCode >= 500)
+                        {
+                            break;
+                        }
+                    }                    
+                }
+                return Json(TestResults); // Format the output
+            }
+            return StatusCode(500);
+        }
+#endif
+
     }
 }
