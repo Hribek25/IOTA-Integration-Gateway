@@ -58,18 +58,18 @@ namespace IOTAGears.Services
             foreach (var node in this.POWStartupNodes) // always starts with all original nodes
             {
                 var client = new RestSharp.RestClient(node) { Timeout = 1000 };
-                var request = new RestSharp.RestRequest(node, RestSharp.Method.POST);
-                request.AddJsonBody(new { command = "attachToTangle" });
+                var request = new RestSharp.RestRequest(node, RestSharp.Method.OPTIONS);
+                //request.AddJsonBody(new { command = "attachToTangle" });
                 var resp = client.Execute(request);               
 
-                if (resp.ResponseStatus==RestSharp.ResponseStatus.Completed && resp.StatusCode==System.Net.HttpStatusCode.BadRequest)
+                if (resp.ResponseStatus==RestSharp.ResponseStatus.Completed && resp.StatusCode==System.Net.HttpStatusCode.NoContent)
                 {
                     stats.Add(node, true);
                     Logger.LogInformation("POW node {node} is healthy!", node);
                 }
                 else
                 {
-                    Logger.LogInformation("Error while checking POW node {node}. Error: {resp.StatusDescription}", resp.StatusDescription);
+                    Logger.LogInformation("Error while checking POW node {node}. Error: {resp.StatusDescription}", node, resp.StatusDescription);
                     stats.Add(node, false);
                 }
             }            
