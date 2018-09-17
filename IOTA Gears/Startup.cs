@@ -44,7 +44,7 @@ namespace IOTAGears
                     new Info {
                         Title = "IOTA Integration Gateway",
                         Version = "v1",
-                        Description = "Integrate IOTA protocol with business workflows that are available today",                        
+                        Description = "Let's integrate IOTA protocol with business workflows that are available today!",                        
                         Contact = new Contact
                         {
                             Name = "GitHub Repo",
@@ -68,14 +68,13 @@ namespace IOTAGears
                     builder => builder
                                 .AllowAnyOrigin()
                                 .AllowAnyMethod()
-                                .AllowAnyHeader()
                     );
             });
             
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders =
-                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto ;
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost ;
             });
             
         }
@@ -84,6 +83,11 @@ namespace IOTAGears
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env)
         {
+
+            app.UseCors("AllowAllOrigins");
+            app.UseForwardedHeaders(); // I assume it is placed behind the proxy
+
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -99,11 +103,7 @@ namespace IOTAGears
                 c.RoutePrefix = "docs";
                 c.DocumentTitle = "IOTA Gateway API Documentation";
                 c.DocExpansion(DocExpansion.None);
-            });
-
-            app.UseCors("AllowAllOrigins");
-
-            app.UseForwardedHeaders(); // I assume it is placed behind the proxy
+            });            
 
             app.UseMvc();
         }
