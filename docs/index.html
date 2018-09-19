@@ -78,7 +78,7 @@
 
 <body>
     <main role="main" id="top">
-        <nav class="navbar navbar-expand-lg bg-white sticky-top ">
+        <nav class="navbar navbar-light navbar-expand-lg bg-white sticky-top ">
             <div class="container">
                 <a class="navbar-brand" href="#">
                     <img src="logo.png" />
@@ -93,7 +93,7 @@
                         <a class="nav-item nav-link" href="#features">Features</a>
                         <a class=" nav-item nav-link" href="#examples">Examples</a>
                         <a class="nav-item nav-link" href="https://api.iogateway.cloud/docs" target="_blank">Documentation</a>
-                        <a class="nav-item nav-link" href="https://github.com/Hribek25/IOTA-Integration-Gateway"  target="_blank">GitHub</a>
+                        <a class="nav-item nav-link" href="https://github.com/Hribek25/IOTA-Integration-Gateway" target="_blank">GitHub</a>
                     </div>
                 </div>
             </div>
@@ -186,122 +186,100 @@
         </div> <!-- features -->
 
         <div class="container-fluid m-5"><hr /></div>
+
         <div class="container">
             <div class="page-header text-center m-3">
                 <h1>Gateway Overview</h1>
             </div>
         </div>
-        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="10000">
-            <div class="carousel-inner">
-                <div class="carousel-item active">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-1">
-                                &nbsp;
-                            </div>
-                            <div class="col-5 text-center">
-                                <img class="w-100" src="https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/architecture_layers.png" />
-                            </div>
-                            <div class="col-5">
-                                <h5 class="text-info mt-3 font-weight-bold">Key Components</h5>
-                                <dl>
-                                    <dt>Documentation</dt>
-                                    <dd>
-                                        All API calls are documented using Open API standard (Swagger). It is available as a standalone file in a structured JSON definition
-                                        and as an interactive API explorer.
-                                    </dd>
 
-                                    <dt>Interfaces (Entry Points)</dt>
-                                    <dd>
-                                        An interface provides you with a definition of high-level API calls that encapsulate specific calls over IOTA network.
-                                        Those calls are hidden under the hood and so users do not have to worry about implementation details.
-                                        The interface layer is decoupled from the application business logic. This design enables us to prepare multiple interfaces targetted different purposes.
-                                    </dd>
-
-                                    <dt>Cache Layer</dt>
-                                    <dd>
-                                        Some responses are automatically cached for the given period of time (seconds/minutes) so users do not have to worry much about effectiveness of their integration use cases.
-                                        Any subsequent calls are served from the short-term cache to minimize their latency.
-                                    </dd>
-
-                                    <dt>API Controllers</dt>
-                                    <dd>It contains application business logic and it is provided in a form of shared services across the application.</dd>
-
-                                    <dt>Storage Layer</dt>
-                                    <dd>
-                                        Public API calls usually involve several chained calls over IOTA network and so they may be quite expensive (in terms of time needs).
-                                        The application stores some elements (objects) returned from the IOTA network (confirmed transactions, transaction trytes, etc.) in order to minimize number of calls over the network.
-                                        It enables to effectively pulling only new information from the Tangle (only new transactions, etc.) and merging new object with old ones.
-                                    </dd>
-
-                                    <dt>IOTA Network</dt>
-                                    <dd>
-                                        The component is designed in order to leverage a pool of public IOTA nodes and so it is not necessary to deploy any IOTA nodes in order to deploy the gateway.
-                                        There is a background health-check process that periodically checks all IOTA nodes in the pool to minimize unsuccesfull calls over IOTA network.
-                                    </dd>
-
-                                    <dt>Background Pipeline Worker</dt>
-                                    <dd>
-                                        Some tasks may be very time demanding (ex. sending transaction, monitoring callbacks, etc.) and so they are added to a pipeline and are processed via an asynchronous process sequentially.
-                                        The background worker can be also leveraged for auto-monitoring balances, auto-promoter, etc.
-                                    </dd>
-
-                                </dl>
-                            </div>
-                            <div class="col-1">
-                                &nbsp;
-                            </div>
-                        </div>
-                    </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-5 offset-md-1 text-center">
+                    <img class="w-100" src="https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/architecture_layers.png" />
                 </div>
+                <div class="col-md-5">
+                    <h5 class="text-info mt-3 font-weight-bold">Key Components</h5>
+                    <dl>
+                        <dt>Documentation</dt>
+                        <dd>
+                            All API calls are documented using Open API standard (Swagger). It is available as a standalone file in a structured JSON definition
+                            and as an interactive API explorer.
+                        </dd>
 
-                <div class="carousel-item">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-1">
-                                &nbsp;
-                            </div>
-                            <div class="col-5 text-center">
-                                <img class="w-100" src="https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/architecture_layers.png" />
-                            </div>
-                            <div class="col-5">
-                                <h5 class="text-info mt-3 font-weight-bold">Use Cases</h5>
-                                <p>
-                                    The Gateway provides additional interface layer on top of the standard IOTA protocol to enable additional integration use cases.
-                                    It is provided as a fullstack deployment and so it can be easily installed in multiple instances anywhere even within virtual private networks and regardless operating system.
-                                </p>
-                                <p>It is designed keeping in mind high-level business-oriented tools in which an usage of general purpose languages would be difficult or not possible at all.</p>
-                                <p>It enables use cases such as:</p>
-                                <ul>
-                                    <li>Checking IOTA balances in Excel</li>
-                                    <li>Create business workflow that monitors IOTA transactions and triggers some follow up actions based on them</li>
-                                    <li>Do you need to send a transaction just from a command line? No problem at all</li>
-                                    <li>No dependencies, no third-party libraries, just HTTP protocol</li>
-                                    <li> ...Business Inteligence tools, Productivity Suites, ERPs, CRMs and all other can now leverage information from the IOTA network</li>
-                                </ul>
-                                <blockquote class="blockquote">
-                                    <p class="mb-0 mt-5 text-warning">Let's interact with IOTA network as easy as creating directories.</p>
-                                    <footer class="blockquote-footer font-italic">Our Mission</footer>
-                                </blockquote>
-                            </div>
-                            <div class="col-1">
-                                &nbsp;
-                            </div>
-                        </div>
-                    </div>
-                </div>                
+                        <dt>Interfaces (Entry Points)</dt>
+                        <dd>
+                            An interface provides you with a definition of high-level API calls that encapsulate specific calls over IOTA network.
+                            Those calls are hidden under the hood and so users do not have to worry about implementation details.
+                            The interface layer is decoupled from the application business logic. This design enables us to prepare multiple interfaces targetted different purposes.
+                        </dd>
+
+                        <dt>Cache Layer</dt>
+                        <dd>
+                            Some responses are automatically cached for the given period of time (seconds/minutes) so users do not have to worry much about effectiveness of their integration use cases.
+                            Any subsequent calls are served from the short-term cache to minimize their latency.
+                        </dd>
+
+                        <dt>API Controllers</dt>
+                        <dd>It contains application business logic and it is provided in a form of shared services across the application.</dd>
+
+                        <dt>Storage Layer</dt>
+                        <dd>
+                            Public API calls usually involve several chained calls over IOTA network and so they may be quite expensive (in terms of time needs).
+                            The application stores some elements (objects) returned from the IOTA network (confirmed transactions, transaction trytes, etc.) in order to minimize number of calls over the network.
+                            It enables to effectively pulling only new information from the Tangle (only new transactions, etc.) and merging new object with old ones.
+                        </dd>
+
+                        <dt>IOTA Network</dt>
+                        <dd>
+                            The component is designed in order to leverage a pool of public IOTA nodes and so it is not necessary to deploy any IOTA nodes in order to deploy the gateway.
+                            There is a background health-check process that periodically checks all IOTA nodes in the pool to minimize unsuccesfull calls over IOTA network.
+                        </dd>
+
+                        <dt>Background Pipeline Worker</dt>
+                        <dd>
+                            Some tasks may be very time demanding (ex. sending transaction, monitoring callbacks, etc.) and so they are added to a pipeline and are processed via an asynchronous process sequentially.
+                            The background worker can be also leveraged for auto-monitoring balances, auto-promoter, etc.
+                        </dd>
+
+                    </dl>
+                </div>
+            </div>            
+        </div>
+        <div class="container">
+            <hr />
+        </div>
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-5 offset-md-1">
+                    <h5 class="text-info mt-3 font-weight-bold">Use Cases</h5>
+                    <p>
+                        The Gateway provides additional interface layer on top of the standard IOTA protocol to enable additional integration use cases.
+                        It is provided as a fullstack deployment and so it can be easily installed in multiple instances anywhere even within virtual private networks and regardless operating system.
+                    </p>
+                    <p>It is designed keeping in mind high-level business-oriented tools in which an usage of general purpose languages would be difficult or not possible at all.</p>
+                    <p>It enables use cases such as:</p>
+                    <ul>
+                        <li>Checking IOTA balances in Excel</li>
+                        <li>Create business workflow that monitors IOTA transactions and triggers some follow up actions based on them</li>
+                        <li>Do you need to send a transaction just from a command line? No problem at all</li>
+                        <li>No dependencies, no third-party libraries, just HTTP protocol</li>
+                        <li> ...Business Inteligence tools, Productivity Suites, ERPs, CRMs and all other can now leverage information from the IOTA network</li>
+                    </ul>
+                    <blockquote class="blockquote">
+                        <p class="mb-0 mt-5 text-warning">Let's interact with IOTA network as easy as creating directories.</p>
+                        <footer class="blockquote-footer font-italic">Our Mission</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-5 text-center">
+                    <img class="w-100" src="https://raw.githubusercontent.com/Hribek25/IOTA-Integration-Gateway/master/Graphics/architecture_layers.png" />
+                </div>
             </div>
-            <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
-                <span><i class="fa fa-angle-left text-primary display-4" aria-hidden="true"></i></span>
-                <span class="sr-only">Previous</span>
-            </a>
-            <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
-                <span><i class="fa fa-angle-right text-primary display-4" aria-hidden="true"></i></span>
-                <span class="sr-only">Next</span>
-            </a>
         </div>
 
         <div class="container-fluid m-5"><hr /></div>
+
         <div class="container" id="examples">
             <div class="page-header text-center m-3 mb-0">
                 <h1>Examples</h1>
@@ -343,7 +321,7 @@ in
         </div>
 
         <div class="container-fluid m-5"><hr /></div>
-        
+
         <div class="container" id="tree-container">
             <div class="page-header text-center m-3">
                 <h1>Overview of Currently Implemented API Calls</h1>
@@ -356,7 +334,7 @@ in
             <div class="container">
                 <div class="row">
                     <div class="col-md-10">
-                        <p>Donations to improve the project and support public endpoints are welcome:<br /><small>BMEX9NSLDVBPROARUYPAHSTQBSWNKCGLGPASYSPPUBOEHZNTP9NFEGCEXDRAHKCAFNTYFMGWRMGQKRLXZRLWUQTVM9</small></p>
+                        <p>Donations to improve the project and support public endpoints are welcome:<br /><small style="word-wrap:break-word !important;">BMEX9NSLDVBPROARUYPAHSTQBSWNKCGLGPASYSPPUBOEHZNTP9NFEGCEXDRAHKCAFNTYFMGWRMGQKRLXZRLWUQTVM9</small></p>
                         <p>Feel free to contact author via <a href="https://github.com/Hribek25/IOTA-Integration-Gateway" class="text-light" style="text-decoration:underline;">Github</a> or <a href="https://ecosystem.iota.org/projects/iota-integration-gateway" class="text-light" style="text-decoration:underline;">IOTA Ecosystem</a>.</p>
                     </div>
                     <div class="col-md-2">
@@ -366,9 +344,9 @@ in
                 </div>
 
                 <div class="row">
-                    <div class="col-lg-12">
+                    <div class="col-md-12">
                         <ul class="list-inline">
-                            <li class="float-lg-right"><a href="#top" class="text-light">Back to top</a></li>
+                            <li class="float-md-right"><a href="#top" class="text-light">Back to top</a></li>
                         </ul>
                         <p><small>Website template by <a href="https://bootswatch.com/spacelab/" class="text-light">Bootswatch</a>.</small></p>
                     </div>
