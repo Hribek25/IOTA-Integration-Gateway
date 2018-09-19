@@ -164,6 +164,5 @@ namespace IOTAGears.Controllers
             return StatusCode(500);
         }
 #endif
-
     }
 }
