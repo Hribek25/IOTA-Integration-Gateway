@@ -33,11 +33,15 @@ namespace IOTAGears.Controllers
         }
         //CTOR
 
-        // GET api/core/status
+        // GET/HEAD api/core/status
         /// <summary>
-        /// Gateway status
+        /// Gateway Status
         /// </summary>
-        /// <returns></returns>        
+        /// <remarks>
+        ///This call can be used to verify whether the given gateway is online and ready to process your requests
+        /// </remarks>
+        /// <returns>Status and the version</returns>
+        /// <response code="200">Gateway is ready</response>
         [HttpHead()]
         [HttpGet()]
         [CacheTangleResponse(
@@ -55,16 +59,22 @@ namespace IOTAGears.Controllers
 
         // GET api/core/ApiMapCalls
         /// <summary>
-        /// Summary of avaiable API calls in a structured format
+        /// Summary of available API calls in a structured format
         /// </summary>
-        /// <returns></returns>        
+        /// <remarks>
+        /// This is very simplified version of available API calls. If you are after Open API description file then it is better to get Swagger description via the Documentation
+        /// </remarks>
+        /// <returns>Structured format of available API calls</returns>
+        /// <response code="200">Success</response>
+        /// <response code="500">Server was not able to prepare API call definitions</response>
         [HttpGet()]
         [CacheTangleResponse(
-            LifeSpan = 86000,
+            LifeSpan = 3600,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
-        [ProducesResponseType(typeof(NodeTree), (int)HttpStatusCode.OK)]        
+        [ProducesResponseType(typeof(NodeTree), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ApiMapCalls()
         {
             // var TargetURL = Request.Scheme + "://" + Request.Host.ToString() + Program.SwaggerJSONFile();
@@ -105,9 +115,10 @@ namespace IOTAGears.Controllers
             }
             return StatusCode(500);
         }
-
-
+        
 #if DEBUG
+        // This action is meant to be used only in DEBUG mode for debugging purposes only. Do not use it in the production
+        [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet()]
         public IActionResult PerformSelfTest()
         {

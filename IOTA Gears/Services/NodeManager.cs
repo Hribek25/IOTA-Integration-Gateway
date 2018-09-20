@@ -89,7 +89,7 @@ namespace IOTAGears.Services
             foreach (var node in this.StartupNodes) // always starts with all original nodes
             {
                 var repo = new Tangle.Net.Repository.RestIotaRepository(
-                    new RestSharp.RestClient(node) { Timeout = 1000 }
+                    new RestSharp.RestClient(node) { Timeout = 1000 } // the node should answer in one minute otherwise timeout
                 );
 
                 Tangle.Net.Repository.DataTransfer.NodeInfo ninfo;
@@ -100,7 +100,7 @@ namespace IOTAGears.Services
                 catch (Exception e)
                 {
                     ninfo = null;
-                    Logger.LogInformation("Error while checking {node}. Error: {e.Message}", node, e.Message);
+                    Logger.LogInformation("Error while checking {node}. Error: {e.Message} Inner Exception: {e.InnerException.Message}", node, e.Message, e.InnerException.Message);
                 }               
 
                 stats.Add(node, ninfo);                

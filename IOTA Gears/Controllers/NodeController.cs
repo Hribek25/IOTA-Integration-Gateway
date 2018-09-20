@@ -29,9 +29,10 @@ namespace IOTAGears.Controllers
         
         // GET api/node/getnodeinfo
         /// <summary>
-        /// Basic summary of an IOTA node and its status
+        /// Basic summary of an IOTA node and its status 
         /// </summary>
-        /// <returns></returns>
+        /// <remarks>Please note, the gateway usually partners with several IOTA load balancers/IOTA nodes and so the results differ based on the actual node that was selected for the particular API call</remarks>
+        /// <returns>Overall IOTA node parameters</returns>
         /// <response code="504">Result is not available at the moment</response>    
         [HttpGet("[action]")]
         [CacheTangleResponse(

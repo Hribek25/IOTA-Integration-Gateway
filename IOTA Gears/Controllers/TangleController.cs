@@ -36,14 +36,14 @@ namespace IOTAGears.Controllers
         
         // GET api/tangle/address/transactions
         /// <summary>
-        /// All transaction hashes related to the given IOTA address
+        /// Transaction hashes by IOTA address
         /// </summary>
         /// <returns>List of transaction hashes</returns>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions")]
         [CacheTangleResponse(
-            LifeSpan = 300,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -54,7 +54,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidAddress(address))
             {
-                return BadRequest(); //return 400 error
+                return BadRequest("Incorect format of the address"); //return 400 error
             }
 
             TransactionHashList res;
@@ -76,14 +76,14 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/bundle/transactions
         /// <summary>
-        /// All transaction hashes related to the given bundle
+        /// Transaction hashes by IOTA bundle
         /// </summary>
         /// <returns>List of transaction hashes</returns>
         /// <response code="400">Incorect format of the bundle hash</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("bundle/{hash}/transactions")]
         [CacheTangleResponse(
-            LifeSpan = 300,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -94,7 +94,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidHash(hash))
             {
-                return BadRequest(); //return 400 error
+                return BadRequest("Incorect format of the bundle hash"); //return 400 error
             }
 
             TransactionHashList res;
@@ -115,16 +115,16 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/address/transactions/details
         /// <summary>
-        /// All transactions including all details related to the given IOTA address
+        /// Transactions with all details by IOTA address
         /// </summary>
-        /// <remarks>Transactions sorted in a descending order</remarks>
+        /// <remarks>Transactions are sorted by timestamp in descending order</remarks>
         /// <returns>List of transactions</returns>        
         /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("address/{address}/transactions/details")]
         [CacheTangleResponse(
-            LifeSpan = 15,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -137,7 +137,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidAddress(address))
             {
-                return BadRequest(); //return 400 error
+                return BadRequest("Incorect format of the address"); //return 400 error
             }
             
             List<TransactionContainer> res;
@@ -165,16 +165,16 @@ namespace IOTAGears.Controllers
 
 
         /// <summary>
-        /// All transactions including all details related to the given bundle
+        /// Transactions with all details by IOTA bundle
         /// </summary>
-        /// <remarks>Transactions sorted in a descending order</remarks>
+        /// <remarks>Transactions are sorted by timestamp in descending order</remarks>
         /// <returns>List of transactions</returns>        
         /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
         /// <response code="400">Incorect format of the bundle hash</response>
         /// <response code="504">Result is not available at the moment</response>
         [HttpGet("bundle/{hash}/transactions/details")]
         [CacheTangleResponse(
-            LifeSpan = 15,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -187,7 +187,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidHash(hash))
             {
-                return BadRequest(); //return 400 error
+                return BadRequest("Incorect format of the bundle hash"); //return 400 error
             }
 
             List<TransactionContainer> res;
@@ -216,14 +216,17 @@ namespace IOTAGears.Controllers
 
         // GET api/tangle/address/balance
         /// <summary>
-        /// Confirmed balance of the given IOTA address based on the latest confirmed milestone
+        /// Confirmed balance by IOTA address
         /// </summary>
-        /// <returns></returns>
+        /// <remarks>
+        /// It is based on the latest confirmed milestone
+        ///  </remarks>
+        /// <returns>IOTA balance</returns>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>  
         [HttpGet("address/{address}/balance")]
         [CacheTangleResponse(
-            LifeSpan = 10,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -234,7 +237,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidAddress(address))
             {
-                return BadRequest(); //return 400
+                return BadRequest("Incorect format of the address"); //return 400
             }
 
             AddressWithBalances res;
@@ -256,12 +259,12 @@ namespace IOTAGears.Controllers
         /// <summary>
         /// Transaction details by transaction hash
         /// </summary>
-        /// <returns></returns>
+        /// <returns>All details by the given transaction</returns>
         /// <response code="400">Incorect format of the hash</response>
         /// <response code="504">Result is not available at the moment</response>  
         [HttpGet("transaction/{hash}")]
         [CacheTangleResponse(
-            LifeSpan = 10,
+            LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
         [Produces("application/javascript")]
@@ -272,7 +275,7 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidHash(hash))
             {
-                return BadRequest(); //return 400
+                return BadRequest("Incorect format of the hash"); //return 400
             }
 
             List<TransactionContainer> res;
@@ -296,14 +299,15 @@ namespace IOTAGears.Controllers
 
         // POST api/tangle/address/sendtx
         /// <summary>
-        /// Send non-value transaction to the given IOTA address. Message to be broadcasted should be in the request body
+        /// Send non-value transaction to the given IOTA address. Message to be broadcasted should be in the request body. Message is split into several transactions if needed.
         /// </summary>
-        /// <remarks>Transactions may not be sent immediately. All requests are added to a common pipeline which is being processed sequentially.
-        /// There is a output parameter <code>NumberOfRequests</code> that indicates how many requests are in the pipeline (inclusive).</remarks>
-        /// <returns></returns>
-        /// <response code="400">Incorect format of the address</response>
+        /// <remarks>Transactions may not be sent immediately. All requests are added to a pipeline which is being processed sequentially.
+        /// There is a output parameter <code>NumberOfRequests</code> that indicates how many requests are in the pipeline (inclusive) before your request.</remarks>
+        /// <returns>Confirmation that your task was added to the pipeline including an unique id that identifies your particular request</returns>
+        /// <response code="202">Your message has been accepted by the gateway and will be broadcasted as soon as possible</response>
+        /// <response code="400">Incorect format of the address / parameters / message is too long</response>
         /// <response code="504">Action could not be performed at the moment</response>  
-        /// <response code="429">Too many requests</response>  
+        /// <response code="429">Too many requests. There is a hard limit on requests/second</response>  
         [HttpPost("address/{address}/sendtx")]
         [ProducesResponseType(typeof(PipelineStatus), (int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
@@ -313,12 +317,12 @@ namespace IOTAGears.Controllers
         {
             if (!CommonHelpers.IsValidAddress(address) || !ModelState.IsValid)
             {
-                return BadRequest("Bad format of the address or request."); //return 400
+                return BadRequest("Bad format of the address or request parameters"); //return 400
             }
 
             if (message.Length>6500) // message is too long
             {
-                return BadRequest("Message is too long."); //return 400
+                return BadRequest("Message is too long"); //return 400
             }
             
             PipelineStatus res;
@@ -337,7 +341,7 @@ namespace IOTAGears.Controllers
                 return StatusCode(429);
             }
 
-            return Accepted(res);
+            return Accepted(res); // 202 response
         }
     }
 }
