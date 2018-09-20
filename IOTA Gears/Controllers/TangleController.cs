@@ -46,15 +46,16 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        // [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(Tangle.Net.Repository.DataTransfer.TransactionHashList), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> TransactionsByAddress(string address)
         {
             if (!CommonHelpers.IsValidAddress(address))
             {
-                return BadRequest("Incorect format of the address"); //return 400 error
+                return BadRequest("Incorect format of the address"); //return 400 error                
             }
 
             TransactionHashList res;
@@ -86,7 +87,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(TransactionHashList), (int)HttpStatusCode.OK)]
@@ -127,7 +128,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
@@ -177,7 +178,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
@@ -229,7 +230,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(AddressWithBalances), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -267,7 +268,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 45,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -299,11 +300,13 @@ namespace IOTAGears.Controllers
 
         // POST api/tangle/address/sendtx
         /// <summary>
-        /// Send non-value transaction to the given IOTA address. Message to be broadcasted should be in the request body. Message is split into several transactions if needed.
+        /// Send non-value transaction to the given IOTA address
         /// </summary>
-        /// <remarks>Transactions may not be sent immediately. All requests are added to a pipeline which is being processed sequentially.
-        /// There is a output parameter <code>NumberOfRequests</code> that indicates how many requests are in the pipeline (inclusive) before your request.</remarks>
-        /// <returns>Confirmation that your task was added to the pipeline including an unique id that identifies your particular request</returns>
+        /// <remarks>Message to be broadcasted should be in the request body.
+        /// Message is split into several transactions if needed. Transactions may not be sent immediately. All requests are added to a pipeline which is being processed sequentially
+        /// </remarks>
+        /// <returns>Confirmation that your task was added to the pipeline including an unique id that identifies your particular request.
+        /// There is a output parameter <code>NumberOfRequests</code> that indicates how many requests are in the pipeline (inclusive) before your request.</returns>
         /// <response code="202">Your message has been accepted by the gateway and will be broadcasted as soon as possible</response>
         /// <response code="400">Incorect format of the address / parameters / message is too long</response>
         /// <response code="504">Action could not be performed at the moment</response>  

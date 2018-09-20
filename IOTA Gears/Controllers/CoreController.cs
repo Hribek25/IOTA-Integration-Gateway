@@ -48,7 +48,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 30,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]        
+        [Produces("application/json")]        
         [ProducesResponseType(typeof(GatewayStatus), (int)HttpStatusCode.OK)]
         public IActionResult Status()
         {
@@ -72,7 +72,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 3600,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(NodeTree), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult ApiMapCalls()
@@ -117,8 +117,7 @@ namespace IOTAGears.Controllers
         }
         
 #if DEBUG
-        // This action is meant to be used only in DEBUG mode for debugging purposes only. Do not use it in the production
-        [ApiExplorerSettings(IgnoreApi = true)]
+        // This action is meant to be used only in DEBUG mode for debugging purposes only. Do not use it in the production        
         [HttpGet()]
         public IActionResult PerformSelfTest()
         {

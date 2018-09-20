@@ -39,7 +39,7 @@ namespace IOTAGears.Controllers
             LifeSpan = 20,
             StatusCode = (int)HttpStatusCode.OK)
             ]
-        [Produces("application/javascript")]
+        [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType(typeof(NodeInfo), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetNodeInfo()
