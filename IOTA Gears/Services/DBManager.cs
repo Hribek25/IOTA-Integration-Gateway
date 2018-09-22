@@ -9,32 +9,62 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using IOTAGears.EntityModels;
+using System.Data.Common;
+using Microsoft.Extensions.Configuration;
+using MySql.Data.MySqlClient;
 
 namespace IOTAGears.Services
 {
     public interface IDBManager
     {
-         SqliteConnection DBConnection { get; }         
+         DbConnection DBConnection { get; }         
     }
     
     public class DBManager : IDBManager, IDisposable
     {
-        public SqliteConnection DBConnection { get; private set; }
+        public DbConnection DBConnection { get; private set; }
         private Logger<DBManager> Logger { get; set; }
+        private IConfiguration Configuration { get; set; }
+        private DbLayerProvider DbProvider { get; }
+
         private bool disposed = false;
         private readonly int AbuseTimeInterval = 60; // interval (number of seconds) to check an abuse usage
         private readonly int AbuseCount = 3; // max number of requests from the same IP within the AbuseTimeInterval
 
-        public DBManager(ILogger<DBManager> logger)
-        {            
+        public DBManager(ILogger<DBManager> logger, IConfiguration conf)
+        {
+            Configuration = conf;
             Logger = (Logger<DBManager>)logger;
-            DBConnection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Program.DBLayerDataSource() }.ConnectionString);
-            Logger.LogInformation("DB storage initiated and ready... Using file: {DBConnection.DataSource}", DBConnection.DataSource);            
+            this.DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
+            var DbConnStr = conf.GetValue<string>("SqlDbConnStr");
+            string connStr;
+
+            if (DbProvider==DbLayerProvider.Sqlite)
+            {
+                connStr = "Data Source=" + Program.SqliteDbLayerDataSource();
+            }
+            else
+            {
+                connStr = DbConnStr;
+            }
+
+            DbConnection DbConn; // Common DbConnection interface
+            if (DbProvider == DbLayerProvider.Sqlite)
+            {
+                DbConn = new SqliteConnection(connStr);
+            }
+            else
+            {
+                DbConn = new MySqlConnection(connStr);
+            }            
+
+            DBConnection = DbConn;
+            Logger.LogInformation("DB storage initiated and ready... Using source: {DBConnection.DataSource}", DBConnection.DataSource);
         }
 
         public async Task<JsonResult> GetCacheEntryAsync(string request, string contentType, int LifeSpan)
         {
-            SqliteCommand c = _GetCacheEntrySQL(request.ToUpperInvariant(), contentType, LifeSpan);
+            DbCommand c = _GetCacheEntrySQL(request.ToUpperInvariant(), contentType, LifeSpan);
             DBConnection.Open();
 
             JsonResult cacheEntry = null; // default return value
@@ -54,12 +84,11 @@ namespace IOTAGears.Services
         }
         public async Task AddCacheEntryAsync(string request, JsonResult result, string contentType)
         {
-            SqliteCommand c = _AddCacheEntrySQL(request.ToUpperInvariant(), result, contentType);
+            DbCommand c = _AddCacheEntrySQL(request.ToUpperInvariant(), result, contentType);
 
             DBConnection.Open();
             await c.ExecuteNonQueryAsync();
-            DBConnection.Close();
-            
+            DBConnection.Close();            
         }
         
         public async Task AddPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
@@ -180,8 +209,7 @@ namespace IOTAGears.Services
                     while (reader.Read())
                     {
                         var entry = new TaskEntry()
-                        {
-                            Rowid = (long)reader["rowid"],
+                        {                            
                             Input = (TaskEntryInput)DBSerializer.DeserializeFromJson((string)reader["input"]),
                             Task = (string)reader["task"],
                             Timestamp = (long)reader["timestamp"],
@@ -197,130 +225,225 @@ namespace IOTAGears.Services
             return output;
         }
         
-        public async Task UpdateTaskEntryInPipeline(long rowid, int performed, object result)
+        public async Task UpdateTaskEntryInPipeline(string globalid, int performed, object result)
         {
-            var outputcmd = _UpdateTaskEntrySQL(rowid, performed, result);
+            var outputcmd = _UpdateTaskEntrySQL(globalid, performed, result);
 
             DBConnection.Open();
             await outputcmd.ExecuteNonQueryAsync();
             DBConnection.Close();
 
-            Logger.LogInformation("Task pipeline (UPDATE) for an individual element. Rowid {rowid} was updated with status {performed}.", rowid, performed);
+            Logger.LogInformation("Task pipeline (UPDATE) for an individual element. Rowid {guid} was updated with status {performed}.", globalid, performed);
         }
 
         #region SQLHelpers
-        private SqliteCommand _AddCacheEntrySQL(string request, JsonResult result, string contentType)
+        private DbCommand _AddCacheEntrySQL(string request, JsonResult result, string contentType)
         {
-            var cmd = "DELETE FROM [cache] WHERE [query]=@query and [response_type] like @response_type;" + Environment.NewLine; // delete old entries from cache for the given query type/content type
-            cmd += "INSERT INTO [cache] ([timestamp],[query], [response_type], [response]) VALUES (strftime('%s','now'),@query, @response_type, @response)";
+            var cmd = "DELETE FROM `cache` WHERE `query`=@query and `response_type` like @response_type;" + Environment.NewLine; // delete old entries from cache for the given query type/content type
+
+            if (DbProvider==DbLayerProvider.Sqlite)
+            {
+                cmd += "INSERT INTO [cache] ([timestamp],[query], [response_type], [response]) VALUES (strftime('%s','now'),@query, @response_type, @response)";
+            }
+            else
+            {
+                cmd += "INSERT INTO `cache` (`timestamp`,`query`, `response_type`, `response`) VALUES (UNIX_TIMESTAMP(), @query, @response_type, @response)";
+            }            
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
-
             var json = DBSerializer.SerializeToJson(result.Value);
 
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@query",request),
-                    //new SqliteParameter("@span",LifeSpan),
-                    new SqliteParameter("@response_type",contentType),
-                    new SqliteParameter("@response", json)
-                    //new SqliteParameter("@data", SqliteType.Blob,binObj.Length ) { Value=binObj}
-                }
-            );
+            if (DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                        new DbParameter[]
+                        {
+                        new SqliteParameter("@query",request),
+                        new SqliteParameter("@response_type",contentType),
+                        new SqliteParameter("@response", json)
+                        });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                        new DbParameter[]
+                        {
+                        new MySqlParameter("@query",request),
+                        new MySqlParameter("@response_type",contentType),
+                        new MySqlParameter("@response", json)
+                        });
+            }
             return c;
         }
 
-        private SqliteCommand _GetCacheEntrySQL(string request, string contentType, int LifeSpan)
+        private DbCommand _GetCacheEntrySQL(string request, string contentType, int LifeSpan)
         {
-            var cmd = "SELECT * FROM [cache] WHERE (cast(strftime('%s','now') as bigint)-cast([timestamp] as bigint))<=@span and [query]=@query and [response_type] like @contenttype";
+            string cmd;
+            if (DbProvider==DbLayerProvider.Sqlite)
+            {
+                cmd = "SELECT * FROM [cache] WHERE (cast(strftime('%s','now') as bigint)-cast([timestamp] as bigint))<=@span and [query]=@query and [response_type] like @contenttype";
+            }
+            else
+            {
+                cmd = "SELECT * FROM `cache` WHERE (UNIX_TIMESTAMP() - `timestamp`) <= @span and `query` = @query and `response_type` like @contenttype";
+            }
+            
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@span",LifeSpan),
-                    new SqliteParameter("@contenttype",contentType + "%"),
-                    new SqliteParameter("@query",request)
-                }
-            );
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@span",LifeSpan),
+                        new SqliteParameter("@contenttype",contentType + "%"),
+                        new SqliteParameter("@query",request)
+                    });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@span",LifeSpan),
+                        new MySqlParameter("@contenttype",contentType + "%"),
+                        new MySqlParameter("@query",request)
+                    });
+            }            
             return c;
         }
 
-        private SqliteCommand _GetTasksInPipelineSQL(int limit=1)
+        private DbCommand _GetTasksInPipelineSQL(int limit=1)
         {
-            var cmd = "SELECT rowid, * FROM [task_pipeline] WHERE performed=0 ORDER BY timestamp ASC LIMIT @limit";
+            var cmd = "SELECT * FROM `task_pipeline` WHERE performed=0 ORDER BY timestamp ASC LIMIT @limit";
+
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@limit", limit)
-                }
-            );
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@limit", limit)
+                    });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@limit", limit)
+                    });
+            }
             return c;
         }
-
-
-        private SqliteCommand _GetNumberOfTasksInPipelineSQL()
+        
+        private DbCommand _GetNumberOfTasksInPipelineSQL()
         {
-            var cmd = "SELECT COUNT(*) FROM [task_pipeline] WHERE performed=0;";
+            var cmd = "SELECT COUNT(*) FROM `task_pipeline` WHERE performed=0;";
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;            
             return c;
         }
         
-        private SqliteCommand _GetNumberOfTasksFromSameIpSQL(string ip)
+        private DbCommand _GetNumberOfTasksFromSameIpSQL(string ip)
         {
-            var cmd = "SELECT COUNT(*) FROM [task_pipeline] WHERE ip=@ip and [timestamp]>=(cast(strftime('%s','now') as bigint)-@abuseinterval);";
+            string cmd;
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                cmd = "SELECT COUNT(*) FROM [task_pipeline] WHERE ip=@ip and [timestamp]>=(cast(strftime('%s','now') as bigint)-@abuseinterval);";
+            }
+            else
+            {
+                cmd = "SELECT COUNT(*) FROM `task_pipeline` WHERE ip=@ip and `timestamp`>=(UNIX_TIMESTAMP()-@abuseinterval);";
+            }
+                        
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@ip", ip),
-                    new SqliteParameter("@abuseinterval", AbuseTimeInterval)
-                }
-            );
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@ip", ip),
+                        new SqliteParameter("@abuseinterval", AbuseTimeInterval)
+                    });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@ip", ip),
+                        new MySqlParameter("@abuseinterval", AbuseTimeInterval)
+                    });
+            }
+
             return c;
         }
 
-        private SqliteCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
+        private DbCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
         {
             if (string.IsNullOrWhiteSpace(ident))
             {
                 throw new ArgumentNullException(paramName: nameof(ident));
             }
 
-            var cmd = "DELETE FROM [partial_cache] WHERE [call]=@call and [ident]=@ident;" + Environment.NewLine;
-            cmd += "INSERT INTO [partial_cache] ([timestamp], [call], [ident], [EntityTimestamp], [result]) VALUES (strftime('%s','now'), @call, @ident, @txtimestamp, @result)";
+            var cmd = "DELETE FROM `partial_cache` WHERE `call`=@call and `ident`=@ident;" + Environment.NewLine;
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                cmd += "INSERT INTO [partial_cache] ([timestamp], [call], [ident], [EntityTimestamp], [result]) VALUES (strftime('%s','now'), @call, @ident, @txtimestamp, @result)";
+            }
+            else
+            {
+                cmd += "INSERT INTO `partial_cache` (`timestamp`, `call`, `ident`, `EntityTimestamp`, `result`) VALUES (UNIX_TIMESTAMP(), @call, @ident, @txtimestamp, @result)";
+            }            
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
             var json_result = DBSerializer.SerializeToJson(result);
-                        
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@call",call),
-                    new SqliteParameter("@ident",ident),
-                    new SqliteParameter("@result",json_result),
-                    new SqliteParameter("@txtimestamp",timestamp)
-                }
-            );
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@call",call),
+                        new SqliteParameter("@ident",ident),
+                        new SqliteParameter("@result",json_result),
+                        new SqliteParameter("@txtimestamp",timestamp)
+                    } );
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@call",call),
+                        new MySqlParameter("@ident",ident),
+                        new MySqlParameter("@result",json_result),
+                        new MySqlParameter("@txtimestamp",timestamp)
+                    });
+            }            
+            
             return c;
         }
 
-        private IEnumerable<SqliteCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
+        private IEnumerable<DbCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
         {
             if (identDelegate==null)
             {
                 throw new ArgumentNullException(paramName: nameof(identDelegate));
             }
 
-            var commands = new List<SqliteCommand>();
+            var commands = new List<DbCommand>();
+
             string identVal = "";
             long EntityTimestamp = 0;
             foreach (var i in results)
@@ -339,58 +462,113 @@ namespace IOTAGears.Services
             return commands;
         }
         
-        private SqliteCommand _GetPartialCacheOutputEntrySQL(string call)
+        private DbCommand _GetPartialCacheOutputEntrySQL(string call)
         {
-            var cmd = "SELECT * FROM [partial_cache] WHERE [call]=@call ORDER BY [timestamp] DESC";
+            var cmd = "SELECT * FROM `partial_cache` WHERE `call`=@call ORDER BY `timestamp` DESC";
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@call",call)                    
-                }
-            );
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@call",call)
+                    } );
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@call",call)
+                    });
+            }
+            
             return c;
         }
 
-        private SqliteCommand _AddTaskEntrySQL(string task, object input, string ip, string guid)
+        private DbCommand _AddTaskEntrySQL(string task, object input, string ip, string guid)
         {
-            var cmd = "INSERT INTO [task_pipeline] ([timestamp], [task], [input], [performed], [ip], [guid]) VALUES (strftime('%s','now'), @task, @input, 0, @ip, @guid);";
+            string cmd;
+
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                cmd = "INSERT INTO [task_pipeline] ([timestamp], [task], [input], [performed], [ip], [guid]) VALUES (strftime('%s','now'), @task, @input, 0, @ip, @guid);";
+            }
+            else
+            {
+                cmd = "INSERT INTO `task_pipeline` (`timestamp`, `task`, `input`, `performed`, `ip`, `guid`) VALUES (UNIX_TIMESTAMP(), @task, @input, 0, @ip, @guid);";
+            }            
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
             var json_result = DBSerializer.SerializeToJson(input);
 
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@task", task),
-                    new SqliteParameter("@input", json_result),
-                    new SqliteParameter("@ip", ip),
-                    new SqliteParameter("@guid", guid)
-                }
-            );
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@task", task),
+                        new SqliteParameter("@input", json_result),
+                        new SqliteParameter("@ip", ip),
+                        new SqliteParameter("@guid", guid)
+                    });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@task", task),
+                        new MySqlParameter("@input", json_result),
+                        new MySqlParameter("@ip", ip),
+                        new MySqlParameter("@guid", guid)
+                    });
+            }            
             return c;
         }
 
-        private SqliteCommand _UpdateTaskEntrySQL(long rowid, int performed, object result)
+        private DbCommand _UpdateTaskEntrySQL(string guid, int performed, object result)
         {
-            var cmd = "UPDATE [task_pipeline] SET [performed_when]=strftime('%s','now'), [result]=@result, [performed]=@performed WHERE rowid=@rowid;";
+            string cmd;
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                cmd = "UPDATE [task_pipeline] SET [performed_when]=strftime('%s','now'), [result]=@result, [performed]=@performed WHERE guid=@guid;";
+            }
+            else
+            {
+                cmd = "UPDATE `task_pipeline` SET `performed_when`=UNIX_TIMESTAMP(), `result`=@result, `performed`=@performed WHERE guid=@guid;";
+            }
 
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
             var json_result = DBSerializer.SerializeToJson(result);
 
-            c.Parameters.AddRange(
-                new List<SqliteParameter>()
-                {
-                    new SqliteParameter("@performed", performed),
-                    new SqliteParameter("@result", json_result),
-                    new SqliteParameter("@rowid", rowid)
-                }
-            );
+            if (this.DbProvider == DbLayerProvider.Sqlite)
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new SqliteParameter("@performed", performed),
+                        new SqliteParameter("@result", json_result),
+                        new SqliteParameter("@guid", guid)
+                    });
+            }
+            else
+            {
+                c.Parameters.AddRange(
+                    new DbParameter[]
+                    {
+                        new MySqlParameter("@performed", performed),
+                        new MySqlParameter("@result", json_result),
+                        new MySqlParameter("@guid", guid)
+                    });
+            }
+            
             return c;
         }
 

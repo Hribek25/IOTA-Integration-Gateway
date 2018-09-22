@@ -10,9 +10,16 @@ using Microsoft.Extensions.Logging;
 
 namespace IOTAGears
 {
+    public enum DbLayerProvider
+    {
+        Sqlite, // Default should be Sqlite
+        Mysql
+    }
+
+
     public static class Program
     {
-        public static string DBLayerDataSource() => 
+        public static string SqliteDbLayerDataSource() => 
             System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 "iotagears_pipeline.sqlite"
@@ -25,10 +32,17 @@ namespace IOTAGears
 
         public static void Main(string[] args)
         {
-            if (DbLayer.IsDBLayerReady())
+            var wh = BuildWebHost(args); // preparing web host + service container
+
+            // Read a configuration before runnning webhost
+            var conf = (IConfiguration)wh.Services.GetService(typeof(IConfiguration));            
+            var DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
+            var DbConnStr = conf.GetValue<string>("SqlDbConnStr"); 
+
+            if (DbLayer.IsDBLayerReady(DbConnStr, DbProvider))
             {
                 Console.WriteLine("DB layer is ready. Program/Main executes...");
-                BuildWebHost(args).Run();
+                wh.Run();                
             }
             else
             {

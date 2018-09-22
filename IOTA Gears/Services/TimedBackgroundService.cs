@@ -83,8 +83,7 @@ namespace IOTAGears.Services
                             var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new POWService(actualPOWnode));
                             var bundle = new Bundle();
                             Bundle RetBundle = null;
-                            var guid = item.GlobalId;
-                            var rowid = item.Rowid;
+                            var guid = item.GlobalId;                            
                             var seed = Seed.Random();
                             var input = item.Input;
 
@@ -119,7 +118,7 @@ namespace IOTAGears.Services
 
                             if (!ErrorOccurred)
                             {
-                                _db.UpdateTaskEntryInPipeline(rowid, 200, RetBundle.Hash.Value).Wait();                                
+                                _db.UpdateTaskEntryInPipeline(guid, 200, RetBundle.Hash.Value).Wait();                                
                             }
                         }
                         else

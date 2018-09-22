@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 namespace IOTAGears.EntityModels
 {
     public class TaskEntry
-    {
-        public long Rowid { get; set; }
+    {        
         public TaskEntryInput Input { get; set; }
         public string Task { get; set; }
         public long Timestamp { get; set; }
