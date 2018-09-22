@@ -102,7 +102,7 @@ CREATE TABLE cache (
  timestamp BIGINT  NOT NULL
 , query VARCHAR(255) NOT NULL
 , response_type VARCHAR(255) NOT NULL
-, response JSON NOT NULL
+, response LONGTEXT NOT NULL
 );
 
 DROP TABLE IF EXISTS partial_cache;
@@ -111,14 +111,14 @@ timestamp BIGINT NOT NULL
 , `call` VARCHAR(255) NOT NULL
 , ident VARCHAR(255) NOT NULL
 , EntityTimestamp BIGINT
-, result JSON NOT NULL);
+, result MEDIUMTEXT NOT NULL);
 
 
 DROP TABLE IF EXISTS task_pipeline;
 CREATE TABLE task_pipeline (
   timestamp BIGINT NOT NULL
 , task VARCHAR(50) NOT NULL
-, input JSON NULL
+, input TEXT NULL
 , result VARCHAR(255) NULL
 , performed INT NOT NULL
 , performed_when BIGINT NULL
