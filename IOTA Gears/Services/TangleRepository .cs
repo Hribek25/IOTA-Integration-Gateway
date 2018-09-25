@@ -54,7 +54,7 @@ namespace IOTAGears.Services
 
         private RestIotaRepository InitRestClient(string node)
         {
-            var res = new RestIotaRepository(new RestClient(node) { Timeout = 5000 });
+            var res = new RestIotaRepository(new RestClient(node) { Timeout = 10000 });
             Logger.LogInformation("TangleRepository initiated... selected node: {node}", node);
             return res;
         }
@@ -122,7 +122,7 @@ namespace IOTAGears.Services
                 }
                 catch (Exception e)
                 {
-                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                     throw;
                 }
 
@@ -164,7 +164,7 @@ namespace IOTAGears.Services
             }
             catch (Exception e)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -203,7 +203,7 @@ namespace IOTAGears.Services
             }
             catch (Exception e)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -361,7 +361,7 @@ namespace IOTAGears.Services
 
             catch (Exception e)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -387,7 +387,7 @@ namespace IOTAGears.Services
             }
             catch (Exception e)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -429,7 +429,7 @@ namespace IOTAGears.Services
                 }
                 catch (Exception e)
                 {
-                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException.Message);
+                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                     throw;
                 }
 

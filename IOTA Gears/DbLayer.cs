@@ -43,7 +43,7 @@ namespace IOTAGears
                     }
                     connection.Close();
 
-                    if (!tables.Contains("cache") || !tables.Contains("partial_cache") || !tables.Contains("task_pipeline"))
+                    if (!tables.Contains("task_pipeline"))
                     {                        
                         return false;
                     }
@@ -65,24 +65,7 @@ namespace IOTAGears
             if (provider==DbLayerProvider.Sqlite)
             {
                 initscript =
-    @"DROP TABLE IF EXISTS cache;
-CREATE TABLE cache (  
- timestamp bigint  NOT NULL
-, query text NOT NULL
-, response_type text NOT NULL
-, response text NOT NULL
-);
-
-DROP TABLE IF EXISTS partial_cache;
-CREATE TABLE partial_cache (
-timestamp bigint NOT NULL
-, `call` TEXT NOT NULL
-, ident TEXT NOT NULL
-, EntityTimestamp bigint
-, result TEXT NOT NULL);
-
-
-DROP TABLE IF EXISTS task_pipeline;
+    @"DROP TABLE IF EXISTS task_pipeline;
 CREATE TABLE task_pipeline (
   timestamp bigint NOT NULL
 , task text NOT NULL
@@ -97,24 +80,7 @@ CREATE TABLE task_pipeline (
             else
             {
                 initscript =
-    @"DROP TABLE IF EXISTS cache;
-CREATE TABLE cache (  
- timestamp BIGINT  NOT NULL
-, query VARCHAR(255) NOT NULL
-, response_type VARCHAR(255) NOT NULL
-, response LONGTEXT NOT NULL
-);
-
-DROP TABLE IF EXISTS partial_cache;
-CREATE TABLE partial_cache (
-timestamp BIGINT NOT NULL
-, `call` VARCHAR(255) NOT NULL
-, ident VARCHAR(255) NOT NULL
-, EntityTimestamp BIGINT
-, result MEDIUMTEXT NOT NULL);
-
-
-DROP TABLE IF EXISTS task_pipeline;
+    @"DROP TABLE IF EXISTS task_pipeline;
 CREATE TABLE task_pipeline (
   timestamp BIGINT NOT NULL
 , task VARCHAR(50) NOT NULL
