@@ -5,7 +5,7 @@
     <Authors>Petr Zizka, petr@zizkovi.name</Authors>
     <Company></Company>
     <PackageId>IOTA Integration Gateway</PackageId>
-    <Version>0.9.0</Version>
+    <Version>0.9.1</Version>
     <Description>https://github.com/Hribek25/IOTA-Integration-Gateway</Description>
     <Product>IOTA Integration Gateway</Product>
     <RootNamespace>IOTAGears</RootNamespace>
