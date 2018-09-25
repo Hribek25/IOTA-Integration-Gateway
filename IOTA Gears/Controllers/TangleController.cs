@@ -120,9 +120,9 @@ namespace IOTAGears.Controllers
         /// <remarks>Transactions are sorted by timestamp in descending order</remarks>
         /// <returns>List of transactions</returns>        
         /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
-        /// <response code="400">Incorect format of the address</response>
+        /// <response code="400">Incorrect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
-        /// <response code="206">Partial results are returned. Number of transactions is limited to 500.</response>
+        /// <response code="206">Number of transactions is limited to 500. If number of TXs is higher then only 500 TXs are returned</response>
         [HttpGet("address/{address}/transactions/details")]
         [CacheTangleResponse(
             LifeSpan = 45,
