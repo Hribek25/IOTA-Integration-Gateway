@@ -154,8 +154,38 @@ CREATE TABLE task_pipeline (
         {
             var res = false;
             var SqliteDbBasePath = Program.SqliteDbLayerDataSource();
+            var CacheFolderPath = Program.CacheBasePath();           
+
             var connStr = connectionstring;
             var initDB = false;
+
+            // Preparing cache folder
+            if (!System.IO.Directory.Exists(CacheFolderPath))
+            {
+                try
+                {
+                    System.IO.Directory.CreateDirectory(CacheFolderPath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Cache directory can't be created! Error: {e.Message}");
+                    return false;
+                }
+            }
+
+            // Trying write access to that folder
+            try
+            {
+                var TestFile = System.IO.Path.Combine(CacheFolderPath, "writable.test");
+                System.IO.File.WriteAllText(TestFile, "test");                
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"It seems cache directory is not writable! Error: {e.Message}");
+                return false;
+            }
+
+            // Preparing cache folders
 
             if (provider == DbLayerProvider.Sqlite)
             {

@@ -58,7 +58,7 @@ namespace IOTAGears.Controllers
                 return BadRequest("Incorect format of the address"); //return 400 error                
             }
 
-            TransactionHashList res;
+            HashSet<string> res;
             try
             {
                 // get a list of transactions to the given address
@@ -70,8 +70,7 @@ namespace IOTAGears.Controllers
                 return StatusCode(504); // return 504 error       
             }
 
-            return Json(res);                       
-            
+            return Json(res);                                   
         }
 
 
@@ -98,7 +97,7 @@ namespace IOTAGears.Controllers
                 return BadRequest("Incorect format of the bundle hash"); //return 400 error
             }
 
-            TransactionHashList res;
+            HashSet<string> res;
             try
             {
                 // get a list of transactions to the given address
@@ -140,8 +139,8 @@ namespace IOTAGears.Controllers
             {
                 return BadRequest("Incorect format of the address"); //return 400 error
             }
-            
-            List<TransactionContainer> res;
+
+            HashSet<TransactionContainer> res;
             try
             {
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
@@ -153,7 +152,7 @@ namespace IOTAGears.Controllers
             }
 
             List<TransactionContainer> sorted;
-            if (filter==TransactionFilter.All)
+            if (filter == TransactionFilter.All)
             { // all transactions
                 sorted = (from i in res orderby i.Transaction.Timestamp descending select i).ToList();
             }
@@ -161,7 +160,7 @@ namespace IOTAGears.Controllers
             { // only confirmed
                 sorted = (from i in res where (bool)i.IsConfirmed orderby i.Transaction.Timestamp descending select i).ToList();
             }
-            return Json(sorted);                    
+            return Json(sorted);
         }
 
 
@@ -191,7 +190,7 @@ namespace IOTAGears.Controllers
                 return BadRequest("Incorect format of the bundle hash"); //return 400 error
             }
 
-            List<TransactionContainer> res;
+            HashSet<TransactionContainer> res;
             try
             {
                 res = await _repository.Api.GetDetailedTransactionsByBundle(hash);
@@ -279,7 +278,7 @@ namespace IOTAGears.Controllers
                 return BadRequest("Incorect format of the hash"); //return 400
             }
 
-            List<TransactionContainer> res;
+            HashSet<TransactionContainer> res;
             try
             {
                 // get a list of transactions to the given address
@@ -291,7 +290,7 @@ namespace IOTAGears.Controllers
                 return StatusCode(504);
             }
 
-            return Json(res);
+            return Json(res); // it will be only one transation and so no ordering
         }
 
 

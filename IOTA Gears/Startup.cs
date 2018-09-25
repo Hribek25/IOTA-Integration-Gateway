@@ -13,6 +13,7 @@ using Microsoft.Data.Sqlite;
 using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Data.HashFunction.xxHash;
 
 namespace IOTAGears
 {
@@ -26,6 +27,9 @@ namespace IOTAGears
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc();
+
+            // xxHash service            
+            services.AddSingleton(xxHashFactory.Instance.Create());
 
             // Node Manager
             services.AddSingleton<INodeManager, NodeManager>();

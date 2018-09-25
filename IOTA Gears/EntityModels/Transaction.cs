@@ -20,7 +20,7 @@ namespace IOTAGears.EntityModels
         NonValueTransaction
     }
 
-    public class TransactionContainer
+    public class TransactionContainer : IEqualityComparer<TransactionContainer>
     {
         public Tangle.Net.Entity.Transaction Transaction { get; set; }
         public bool? IsConfirmed { get; set; } = null;
@@ -35,6 +35,31 @@ namespace IOTAGears.EntityModels
             // default ctor because of deserialization
         }
 
+        public TransactionContainer(Tangle.Net.Entity.Transaction transaction)
+        {
+            Transaction = transaction;
+
+            try
+            {
+                this.DecodedMessage = !Transaction.Fragment.IsEmpty ? Transaction.Fragment.ToUtf8String() : null;
+                if (DecodedMessage != null && !TransactionContainer.IsPrintableMessage(DecodedMessage))
+                {
+                    DecodedMessage = null;
+                }
+            }
+            catch (Exception)
+            {
+                this.DecodedMessage = null;
+            }
+
+            this.TransactionType = Transaction.Value != 0 ? TransactionType.ValueTransaction : TransactionType.NonValueTransaction;
+            this.Timestamp = Transaction.Timestamp;
+        }
+
+        public TransactionContainer(Tangle.Net.Entity.TransactionTrytes trytes) : this(Tangle.Net.Entity.Transaction.FromTrytes(trytes))
+        {
+        }
+        
         private static bool IsPrintableMessage(string message)
         {
             byte[] encodedBytes = System.Text.Encoding.UTF8.GetBytes(message);
@@ -52,30 +77,14 @@ namespace IOTAGears.EntityModels
             return printable;
         }
 
-        public TransactionContainer(Tangle.Net.Entity.Transaction transaction)
+        public bool Equals(TransactionContainer x, TransactionContainer y)
         {
-            Transaction = transaction;
-
-            try
-            {
-                this.DecodedMessage = !Transaction.Fragment.IsEmpty ? Transaction.Fragment.ToUtf8String() : null;
-                if (DecodedMessage!=null && !TransactionContainer.IsPrintableMessage(DecodedMessage))
-                {
-                    DecodedMessage = null;
-                }
-            }
-            catch (Exception)
-            {
-                this.DecodedMessage = null;
-            }
-            
-            this.TransactionType = Transaction.Value != 0 ? TransactionType.ValueTransaction : TransactionType.NonValueTransaction;
-            this.Timestamp = Transaction.Timestamp;
+            return x.Transaction.Hash.Value==y.Transaction.Hash.Value;
         }
 
-        public TransactionContainer(Tangle.Net.Entity.TransactionTrytes trytes) : this(Tangle.Net.Entity.Transaction.FromTrytes(trytes))
+        public int GetHashCode(TransactionContainer obj)
         {
-
-        }        
+            return obj.Transaction.Hash.Value.GetHashCode(StringComparison.InvariantCulture);
+        }                
     }
 }

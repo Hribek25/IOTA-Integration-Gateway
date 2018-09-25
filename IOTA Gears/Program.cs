@@ -7,6 +7,7 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Data.HashFunction.xxHash;
 
 namespace IOTAGears
 {
@@ -25,11 +26,23 @@ namespace IOTAGears
                 "iotagears_pipeline.sqlite"
                 );
 
+        public static string CacheBasePath() =>
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".iogatewaycache"
+                );
+
+        public static string CacheElementsBasePath() =>
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".iogatewayelementscache"
+                );
+
         public static string AppVersion() =>
             System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
         public static string SwaggerJsonFile() => "/swagger/v1/swagger.json";
-
+        
         public static void Main(string[] args)
         {
             var wh = BuildWebHost(args); // preparing web host + service container

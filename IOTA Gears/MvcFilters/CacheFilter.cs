@@ -48,7 +48,7 @@ namespace IOTAGears.ActionFilters
                 var callerID = $"[{context.HttpContext.Request.Method}]{context.HttpContext.Request.Path}{context.HttpContext.Request.QueryString}";
 
                 Logger.LogInformation("Cache request query: {context.HttpContext.Request.Path}", context.HttpContext.Request.Path);
-                var c = await DBManager.GetCacheEntryAsync(
+                var c = await DBManager.GetFSCacheEntryAsync(
                     callerID,
                     "application/json", // TODO: move this to attribute?
                     CacheLifeSpan
@@ -73,7 +73,7 @@ namespace IOTAGears.ActionFilters
                         {
                             //only if JSON result and sucessfull call
                             // Write response to cache
-                            await DBManager.AddCacheEntryAsync(
+                            await DBManager.AddFSCacheEntryAsync(
                                 callerID, // request
                                 (Microsoft.AspNetCore.Mvc.JsonResult)resultContext.Result, //result
                                 resultContext.HttpContext.Response.ContentType //content type                                

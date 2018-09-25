@@ -12,6 +12,9 @@ using IOTAGears.EntityModels;
 using System.Data.Common;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
+using System.Data.HashFunction;
+using System.Linq;
+using System.Data.HashFunction.xxHash;
 
 namespace IOTAGears.Services
 {
@@ -26,18 +29,20 @@ namespace IOTAGears.Services
         private Logger<DBManager> Logger { get; set; }
         private IConfiguration Configuration { get; set; }
         private DbLayerProvider DbProvider { get; }
+        private IxxHash _xxHash { get; }
 
         private bool disposed = false;
         private readonly int AbuseTimeInterval = 60; // interval (number of seconds) to check an abuse usage
         private readonly int AbuseCount = 3; // max number of requests from the same IP within the AbuseTimeInterval
 
-        public DBManager(ILogger<DBManager> logger, IConfiguration conf)
+        public DBManager(ILogger<DBManager> logger, IConfiguration conf, IxxHash hashprovider)
         {
             Configuration = conf;
             Logger = (Logger<DBManager>)logger;
             this.DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
             var DbConnStr = conf.GetValue<string>("SqlDbConnStr");
             string connStr;
+            _xxHash = hashprovider;
 
             if (DbProvider==DbLayerProvider.Sqlite)
             {
@@ -59,72 +64,123 @@ namespace IOTAGears.Services
             }            
 
             DBConnection = DbConn;
-            Logger.LogInformation("DB storage initiated and ready... Using source: {DBConnection.DataSource}", DBConnection.DataSource);
+            Logger.LogInformation("DB storage initiated and ready... Using {DbProvider.ToString()}, source: {DBConnection.DataSource}", DbProvider.ToString(), DBConnection.DataSource);
         }
 
-        public async Task<JsonResult> GetCacheEntryAsync(string request, string contentType, int LifeSpan)
+        private string GetCacheSubDir(string subDir)
+        {            
+            var target = Path.Combine(Program.CacheBasePath(), subDir);
+            if (Directory.Exists(target))
+            {
+                return target;
+            }
+            else
+            {
+                try
+                {
+                    Directory.CreateDirectory(target);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError("Can't create sub cache directory {target}. Error {e}", target, e.Message);
+                    return null;
+                }
+                return target;
+            }
+        }
+        private string GetElementCacheSubDir(string subDir)
         {
-            DbCommand c = _GetCacheEntrySQL(request.ToUpperInvariant(), contentType, LifeSpan);
-            DBConnection.Open();
+            var target = Path.Combine(Program.CacheElementsBasePath(), subDir);
+            if (Directory.Exists(target))
+            {
+                return target;
+            }
+            else
+            {
+                try
+                {
+                    Directory.CreateDirectory(target);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError("Can't create sub cache directory {target}. Error {e}", target, e.Message);
+                    return null;
+                }
+                return target;
+            }
+        }
+        private string CacheEntryFingerPrint(string request, string contentType)
+        {
+            var cnttype = contentType.Split(";")[0].Replace(" ","", StringComparison.InvariantCulture); // this is workqround in case there is also encoding specified in content type
+            var callerid = (request + cnttype).ToUpperInvariant();
+            var hsh = this._xxHash.ComputeHash(callerid).AsHexString();
+            return hsh;
+        }
+        private string CacheElementEntryFingerPrint(string callerId)
+        {            
+            var callerid = callerId.ToUpperInvariant();
+            var hsh = this._xxHash.ComputeHash(callerid).AsHexString();
+            return hsh;
+        }
+
+        public async Task<JsonResult> GetFSCacheEntryAsync(string request, string contentType, int LifeSpan)
+        {
+            var hashcallerid = CacheEntryFingerPrint(request, contentType);            
+            var targetDir = GetCacheSubDir(hashcallerid.Substring(0,2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hashcallerid.Substring(2)); // target file incl full path 
 
             JsonResult cacheEntry = null; // default return value
-            using (var reader = await c.ExecuteReaderAsync())
+            if (File.Exists(targetFile)) // there is cache entry
             {
-                if (reader.HasRows)
+                TimeSpan actualSpan = DateTime.UtcNow - File.GetLastWriteTimeUtc(targetFile);
+                if (actualSpan.TotalSeconds <= LifeSpan) // cache entry is still quite fresh, so leveraging it
                 {
-                    reader.Read(); // take the first one whatever it is
-                    var jsdata = (string)reader["response"];
+                    var jsdata = await File.ReadAllTextAsync(targetFile);
                     var tmp = DBSerializer.DeserializeFromJson(jsdata);
                     cacheEntry = new JsonResult(tmp);
-                }
-            }
-            DBConnection.Close();
-            
+                }                 
+            }            
             return cacheEntry;
         }
-        public async Task AddCacheEntryAsync(string request, JsonResult result, string contentType)
+        public async Task AddFSCacheEntryAsync(string request, JsonResult result, string contentType)
         {
-            DbCommand c = _AddCacheEntrySQL(request.ToUpperInvariant(), result, contentType);
-
-            DBConnection.Open();
-            await c.ExecuteNonQueryAsync();
-            DBConnection.Close();            
+            var hashcallerid = CacheEntryFingerPrint(request, contentType);
+            var targetDir = GetCacheSubDir(hashcallerid.Substring(0, 2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hashcallerid.Substring(2)); // target file incl full path 
+            var json = DBSerializer.SerializeToJson(result.Value);
+            await File.WriteAllTextAsync(targetFile, json);
         }
-        
-        public async Task AddPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
+        public async Task<object> GetFSPartialCacheEntryAsync(string call)
         {
-            if (identDelegate==null)
+            var hshcall = CacheElementEntryFingerPrint(call);
+            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
+
+            object OutputCacheEntry = null;
+
+            if (File.Exists(targetFile)) // there is cache entry
             {
-                throw new ArgumentNullException(paramName: nameof(identDelegate));
+                var jsdata = await File.ReadAllTextAsync(targetFile);
+                OutputCacheEntry = DBSerializer.DeserializeFromJson(jsdata);
             }
-            
-            DBConnection.Open();
 
-            var cnt = 0;
-            using (var tr = DBConnection.BeginTransaction())
-            {                
-                foreach (var i in _AddPartialCacheOutputEntriesSQL(call.ToUpperInvariant(), results, identDelegate, EntityTimestampDelegate))
-                {
-                    i.Transaction = tr;
-                    await i.ExecuteNonQueryAsync();
-                    cnt += 1;
-                }
-                tr.Commit();
-            }            
-            DBConnection.Close();
-            Logger.LogInformation("Partial cache used (ADD) for multiple elements. {cnt} records were saved for the caller {call}.", cnt, call.Substring(0, 50));
+            Logger.LogInformation("Partial cache used (GET) for individual element. {OutputCacheEntry?.GetType()} was loaded for the caller: {call}.", OutputCacheEntry?.GetType(), call.Substring(0, 50));
+            return OutputCacheEntry;
         }
-        public async Task AddPartialCacheEntryAsync(string call, string ident, long timestamp, object result)
-        {
-            var outputcmd = _AddPartialCacheOutputEntrySQL(call.ToUpperInvariant(), ident, timestamp, result);
 
-            DBConnection.Open();
-            await outputcmd.ExecuteNonQueryAsync();
-            DBConnection.Close();
+        public async Task AddFSPartialCacheEntryAsync(string call, object result)
+        {
+            var hshcall = CacheElementEntryFingerPrint(call);
+            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
+
+            var json = DBSerializer.SerializeToJson(result);
+            await File.WriteAllTextAsync(targetFile, json);            
 
             Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call.Substring(0, 50));
         }
-        public async Task<Int64> AddTaskEntryAsync(string task, object input, string ip, string globaluid)
+        
+        public async Task<Int64> AddDBTaskEntryAsync(string task, object input, string ip, string globaluid)
         {
             var outputcmd = _AddTaskEntrySQL(task.ToUpperInvariant(), input, ip, globaluid);
             var numberoftaskscmd = _GetNumberOfTasksInPipelineSQL();
@@ -146,56 +202,7 @@ namespace IOTAGears.Services
             Logger.LogInformation("Task pipeline (ADD) for an individual element. {input.GetType()} object was saved for the task {task}.", input.GetType(), task);
             return res; // returning -1 in case of abuse usage
         }
-
-        public async Task<List<object>> GetPartialCacheEntriesAsync(string call)
-        {
-            var outputcmd = _GetPartialCacheOutputEntrySQL(call.ToUpperInvariant());
-
-            DBConnection.Open();
-
-            var result = new List<object>();
-            
-            using (var reader = await outputcmd.ExecuteReaderAsync())
-            {
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        var jsdata = (string)reader["result"];
-                        var OutputCacheEntry = DBSerializer.DeserializeFromJson(jsdata);
-                        result.Add(OutputCacheEntry);
-                    }
-                }
-            }
-
-            DBConnection.Close();
-            Logger.LogInformation("Partial cache used (GET) for multiple elements. {result.Count} records were loaded for the caller {call}.", result.Count, call.Substring(0, 50));
-
-            return result.Count==0 ? null : result;
-        }
-        public async Task<object> GetPartialCacheEntryAsync(string call)
-        {
-            var outputcmd = _GetPartialCacheOutputEntrySQL(call.ToUpperInvariant());
-
-            DBConnection.Open();
-
-            object OutputCacheEntry = null;
-            using (var reader = await outputcmd.ExecuteReaderAsync())
-            {
-                if (reader.HasRows)
-                {
-                    reader.Read(); // take the first one whatever it is
-                    var jsdata = (string)reader["result"];
-                    OutputCacheEntry = DBSerializer.DeserializeFromJson(jsdata);
-                }
-            }
-            
-            DBConnection.Close();
-            Logger.LogInformation("Partial cache used (GET) for individual element. {OutputCacheEntry?.GetType()} was loaded for the caller: {call}.", OutputCacheEntry?.GetType(), call.Substring(0, 50));
-
-            return OutputCacheEntry;
-        }
-        public async Task<List<TaskEntry>> GetTaskEntryFromPipelineAsync(int limit = 1)
+        public async Task<List<TaskEntry>> GetDBTaskEntryFromPipelineAsync(int limit = 1)
         {
             var outputcmd = _GetTasksInPipelineSQL(limit);
 
@@ -209,7 +216,7 @@ namespace IOTAGears.Services
                     while (reader.Read())
                     {
                         var entry = new TaskEntry()
-                        {                            
+                        {
                             Input = (TaskEntryInput)DBSerializer.DeserializeFromJson((string)reader["input"]),
                             Task = (string)reader["task"],
                             Timestamp = (long)reader["timestamp"],
@@ -224,8 +231,7 @@ namespace IOTAGears.Services
             Logger.LogInformation("Task pipeline (GET) for individual element. {output.count} elements were returned.", output.Count);
             return output;
         }
-        
-        public async Task UpdateTaskEntryInPipeline(string globalid, int performed, object result)
+        public async Task UpdateDBTaskEntryInPipeline(string globalid, int performed, object result)
         {
             var outputcmd = _UpdateTaskEntrySQL(globalid, performed, result);
 
@@ -236,85 +242,44 @@ namespace IOTAGears.Services
             Logger.LogInformation("Task pipeline (UPDATE) for an individual element. Rowid {guid} was updated with status {performed}.", globalid, performed);
         }
 
-        #region SQLHelpers
-        private DbCommand _AddCacheEntrySQL(string request, JsonResult result, string contentType)
+        public async Task<Dictionary<string, object>> GetFSPartialCacheEntriesAsync(string call)
         {
-            var cmd = "DELETE FROM `cache` WHERE `query`=@query and `response_type` like @response_type;" + Environment.NewLine; // delete old entries from cache for the given query type/content type
+            var hshcall = CacheElementEntryFingerPrint(call);
+            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
 
-            if (DbProvider==DbLayerProvider.Sqlite)
-            {
-                cmd += "INSERT INTO [cache] ([timestamp],[query], [response_type], [response]) VALUES (strftime('%s','now'),@query, @response_type, @response)";
-            }
-            else
-            {
-                cmd += "INSERT INTO `cache` (`timestamp`,`query`, `response_type`, `response`) VALUES (UNIX_TIMESTAMP(), @query, @response_type, @response)";
-            }            
+            Dictionary<string, object> OutputCacheEntry = null;
 
-            var c = DBConnection.CreateCommand();
-            c.CommandText = cmd;
-            var json = DBSerializer.SerializeToJson(result.Value);
-
-            if (DbProvider == DbLayerProvider.Sqlite)
+            if (File.Exists(targetFile)) // there is cache entry
             {
-                c.Parameters.AddRange(
-                        new DbParameter[]
-                        {
-                        new SqliteParameter("@query",request),
-                        new SqliteParameter("@response_type",contentType),
-                        new SqliteParameter("@response", json)
-                        });
-            }
-            else
-            {
-                c.Parameters.AddRange(
-                        new DbParameter[]
-                        {
-                        new MySqlParameter("@query",request),
-                        new MySqlParameter("@response_type",contentType),
-                        new MySqlParameter("@response", json)
-                        });
-            }
-            return c;
-        }
-
-        private DbCommand _GetCacheEntrySQL(string request, string contentType, int LifeSpan)
-        {
-            string cmd;
-            if (DbProvider==DbLayerProvider.Sqlite)
-            {
-                cmd = "SELECT * FROM [cache] WHERE (cast(strftime('%s','now') as bigint)-cast([timestamp] as bigint))<=@span and [query]=@query and [response_type] like @contenttype";
-            }
-            else
-            {
-                cmd = "SELECT * FROM `cache` WHERE (UNIX_TIMESTAMP() - `timestamp`) <= @span and `query` = @query and `response_type` like @contenttype";
+                var jsdata = await File.ReadAllTextAsync(targetFile);
+                OutputCacheEntry = (Dictionary<string, object>)DBSerializer.DeserializeFromJson(jsdata);
             }
             
-            var c = DBConnection.CreateCommand();
-            c.CommandText = cmd;
-
-            if (this.DbProvider == DbLayerProvider.Sqlite)
+            Logger.LogInformation("Partial cache used (GET) for multiple elements. {OutputCacheEntry.Count} records were loaded for the caller {call}.", OutputCacheEntry.Count, call.Substring(0, 50));
+            return OutputCacheEntry.Count == 0 ? null : OutputCacheEntry;
+        }
+        public async Task AddFSPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate)
+        {
+            if (identDelegate == null)
             {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new SqliteParameter("@span",LifeSpan),
-                        new SqliteParameter("@contenttype",contentType + "%"),
-                        new SqliteParameter("@query",request)
-                    });
+                throw new ArgumentNullException(paramName: nameof(identDelegate));
             }
-            else
-            {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new MySqlParameter("@span",LifeSpan),
-                        new MySqlParameter("@contenttype",contentType + "%"),
-                        new MySqlParameter("@query",request)
-                    });
-            }            
-            return c;
+
+            var hshcall = CacheElementEntryFingerPrint(call);
+            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
+            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
+
+            Dictionary<string, object> elements = (from i in results select i ).ToDictionary(a => identDelegate(a), b => b);
+            
+            var json = DBSerializer.SerializeToJson(elements);
+            await File.WriteAllTextAsync(targetFile, json);
+            
+            Logger.LogInformation("Partial cache used (ADD) for multiple elements. {elements.Count} records were saved for the caller {call}.", elements.Count, call.Substring(0, 50));
         }
 
+        #region SQLHelpers
+        
         private DbCommand _GetTasksInPipelineSQL(int limit=1)
         {
             var cmd = "SELECT * FROM `task_pipeline` WHERE performed=0 ORDER BY timestamp ASC LIMIT @limit";
@@ -385,109 +350,7 @@ namespace IOTAGears.Services
 
             return c;
         }
-
-        private DbCommand _AddPartialCacheOutputEntrySQL(string call, string ident, long timestamp, object result)
-        {
-            if (string.IsNullOrWhiteSpace(ident))
-            {
-                throw new ArgumentNullException(paramName: nameof(ident));
-            }
-
-            var cmd = "DELETE FROM `partial_cache` WHERE `call`=@call and `ident`=@ident;" + Environment.NewLine;
-
-            if (this.DbProvider == DbLayerProvider.Sqlite)
-            {
-                cmd += "INSERT INTO [partial_cache] ([timestamp], [call], [ident], [EntityTimestamp], [result]) VALUES (strftime('%s','now'), @call, @ident, @txtimestamp, @result)";
-            }
-            else
-            {
-                cmd += "INSERT INTO `partial_cache` (`timestamp`, `call`, `ident`, `EntityTimestamp`, `result`) VALUES (UNIX_TIMESTAMP(), @call, @ident, @txtimestamp, @result)";
-            }            
-
-            var c = DBConnection.CreateCommand();
-            c.CommandText = cmd;
-
-            var json_result = DBSerializer.SerializeToJson(result);
-
-            if (this.DbProvider == DbLayerProvider.Sqlite)
-            {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new SqliteParameter("@call",call),
-                        new SqliteParameter("@ident",ident),
-                        new SqliteParameter("@result",json_result),
-                        new SqliteParameter("@txtimestamp",timestamp)
-                    } );
-            }
-            else
-            {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new MySqlParameter("@call",call),
-                        new MySqlParameter("@ident",ident),
-                        new MySqlParameter("@result",json_result),
-                        new MySqlParameter("@txtimestamp",timestamp)
-                    });
-            }            
-            
-            return c;
-        }
-
-        private IEnumerable<DbCommand> _AddPartialCacheOutputEntriesSQL(string call, IEnumerable<object> results, Func<object,string> identDelegate, Func<object, long> EntityTimestampDelegate = null)
-        {
-            if (identDelegate==null)
-            {
-                throw new ArgumentNullException(paramName: nameof(identDelegate));
-            }
-
-            var commands = new List<DbCommand>();
-
-            string identVal = "";
-            long EntityTimestamp = 0;
-            foreach (var i in results)
-            {
-                identVal = identDelegate(i);
-                EntityTimestamp = EntityTimestampDelegate==null ? 0 : EntityTimestampDelegate(i);
-
-                commands.Add(
-                    _AddPartialCacheOutputEntrySQL(
-                        call: call,
-                        ident: identVal,
-                        timestamp: EntityTimestamp,
-                        result: i)
-                    );
-            }
-            return commands;
-        }
         
-        private DbCommand _GetPartialCacheOutputEntrySQL(string call)
-        {
-            var cmd = "SELECT * FROM `partial_cache` WHERE `call`=@call ORDER BY `timestamp` DESC";
-            var c = DBConnection.CreateCommand();
-            c.CommandText = cmd;
-
-            if (this.DbProvider == DbLayerProvider.Sqlite)
-            {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new SqliteParameter("@call",call)
-                    } );
-            }
-            else
-            {
-                c.Parameters.AddRange(
-                    new DbParameter[]
-                    {
-                        new MySqlParameter("@call",call)
-                    });
-            }
-            
-            return c;
-        }
-
         private DbCommand _AddTaskEntrySQL(string task, object input, string ip, string guid)
         {
             string cmd;

@@ -56,7 +56,7 @@ namespace IOTAGears.Services
 
             _logger.LogInformation("Background Task: Processing Tasks... Starting");
 
-            var tasks = _db.GetTaskEntryFromPipelineAsync().Result;
+            var tasks = _db.GetDBTaskEntryFromPipelineAsync().Result;
 
             if (tasks.Count>0)
             {
@@ -118,7 +118,7 @@ namespace IOTAGears.Services
 
                             if (!ErrorOccurred)
                             {
-                                _db.UpdateTaskEntryInPipeline(guid, 200, RetBundle.Hash.Value).Wait();                                
+                                _db.UpdateDBTaskEntryInPipeline(guid, 200, RetBundle.Hash.Value).Wait();                                
                             }
                         }
                         else
