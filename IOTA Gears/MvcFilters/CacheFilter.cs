@@ -76,7 +76,7 @@ namespace IOTAGears.ActionFilters
                             // Write response to cache
                             await DBManager.AddFSCacheEntryAsync(
                                 callerID, // request
-                                (ObjectResult)resultContext.Result, //result
+                                resultContext.Result, //result
                                 resultContext.HttpContext.Response.ContentType //content type                                
                                 );
                             Logger.LogInformation("New entry to CACHE for Request: {context.HttpContext.Request.Path}", context.HttpContext.Request.Path);

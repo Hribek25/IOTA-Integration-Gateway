@@ -142,13 +142,26 @@ namespace IOTAGears.Services
             }            
             return cacheEntry;
         }
-        public async Task AddFSCacheEntryAsync(string request, ObjectResult result, string contentType)
+        public async Task AddFSCacheEntryAsync(string request, object result, string contentType)
         {
             var hashcallerid = CacheEntryFingerPrint(request, contentType);
             var targetDir = GetCacheSubDir(hashcallerid.Substring(0, 2)); // create and return target sub directory
             var targetFile = Path.Combine(targetDir, hashcallerid.Substring(2)); // target file incl full path 
-            var json = DBSerializer.SerializeToJson(result.Value);
-            await File.WriteAllTextAsync(targetFile, json);
+
+            string json = null;
+            if (result is ObjectResult)
+            {
+                json = DBSerializer.SerializeToJson((result as ObjectResult).Value);
+            }
+            if (result is JsonResult)
+            {
+                json = DBSerializer.SerializeToJson((result as JsonResult).Value);
+            }
+
+            if (!(json is null))
+            {
+                await File.WriteAllTextAsync(targetFile, json);
+            }            
         }
         public async Task<object> GetFSPartialCacheEntryAsync(string call)
         {
