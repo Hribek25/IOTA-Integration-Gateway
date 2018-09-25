@@ -96,13 +96,10 @@ namespace IOTAGears.Services
 
         private async Task<HashSet<string>> GetLatestInclusionStates(string hash, HashSet<string> hashes) // non-public function
         {
-            if (hashes.Count == 0)
-            {
-                return null;
-            }
+            if (hashes.Count == 0)  { return null; }
 
             // get a list of confirmed TXs to the given address
-            var callerID = $"ConfirmedTransactionsByHash::{hash}";
+            var callerID = $"{nameof(GetLatestInclusionStates)}::{hash}";
 
             // Get from a partial cache - list of confirmed TX hashes
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -148,7 +145,7 @@ namespace IOTAGears.Services
         public async Task<HashSet<string>> GetTransactionsByBundle(string bundleHash)
         {
             // get a list of transactions to the given address
-            var callerID = $"FindTransactionsByBundle::{bundleHash}";
+            var callerID = $"{nameof(GetTransactionsByBundle)}::{bundleHash}";
 
             // Get from a partial cache
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -187,7 +184,7 @@ namespace IOTAGears.Services
         public async Task<HashSet<string>> GetTransactionsByAddress(string address)
         {
             // get a list of transactions to the given address
-            var callerID = $"FindTransactionsByAddress::{address}";
+            var callerID = $"{nameof(GetTransactionsByAddress)}::{address}";
 
             // Get from a partial cache
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -222,9 +219,9 @@ namespace IOTAGears.Services
             return CachedOutput; //returning all from cache + new one from API call
         }
 
-        public async Task<HashSet<TransactionContainer>> GetDetailedTransactionsByAddress(string address)
+        public async Task<TxHashSetCollection> GetDetailedTransactionsByAddress(string address)
         {
-            var callerID = $"FindTransactionsByAddress.Details::{address}";
+            var callerID = $"{nameof(GetDetailedTransactionsByAddress)}::{address}";
 
             HashSet<string> trnList;
             try
@@ -237,11 +234,25 @@ namespace IOTAGears.Services
             }
 
             // GETTING DETAILS
+            // Limited to 500 transactions.
+            var TooMany = false;
 
-            return await GetTransactionDetails(address, trnList);
+            if (trnList.Count>500)
+            {
+                trnList = trnList.Take(500).ToHashSet();
+                TooMany = true;
+            }
+            
+            var res = await GetTransactionDetails(address, trnList);
+
+            if (TooMany)
+            {
+                res.CompleteSet = false; // Indicate that the result is not completed
+            }
+            return res;
         }
 
-        public async Task<HashSet<TransactionContainer>> GetDetailedTransactionByHash(string hash)
+        public async Task<TxHashSetCollection> GetDetailedTransactionByHash(string hash)
         {
             HashSet<string> trnList = new HashSet<string>() { hash };
 
@@ -250,9 +261,9 @@ namespace IOTAGears.Services
             return await GetTransactionDetails(hash, trnList);
         }
 
-        public async Task<HashSet<TransactionContainer>> GetDetailedTransactionsByBundle(string bundleHash)
+        public async Task<TxHashSetCollection> GetDetailedTransactionsByBundle(string bundleHash)
         {
-            var callerID = $"FindTransactionsByBundle.Details::{bundleHash}";
+            var callerID = $"{nameof(GetDetailedTransactionsByBundle)}::{bundleHash}";
 
             HashSet<string> trnList;
             try
@@ -270,9 +281,9 @@ namespace IOTAGears.Services
             return await GetTransactionDetails(bundleHash, trnList);
         }
 
-        private async Task<HashSet<TransactionContainer>> GetTransactionDetails(string hash, HashSet<string> transactionList)
+        private async Task<TxHashSetCollection> GetTransactionDetails(string hash, HashSet<string> transactionList)
         {
-            var callerID = $"FullTransactions::{hash}";
+            var callerID = $"{nameof(GetTransactionDetails)}::{hash}";
 
             // Getting from a partial cache to speed up the second call
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -293,7 +304,7 @@ namespace IOTAGears.Services
 
 
             // independent branch 2
-            var resTransactions = new HashSet<TransactionContainer>(); // final collection of transactions to be returned
+            var resTransactions = new TxHashSetCollection(); // final collection of transactions to be returned
             if (transactionList.Count > 0) // are there any TXs to get info about?
             {
                 List<TransactionTrytes> trnTrytes;
@@ -371,7 +382,7 @@ namespace IOTAGears.Services
         public async Task<AddressWithBalances> GetBalanceByAddress(string address)
         {
             // get a list of transactions to the given address
-            var callerID = $"GetBalanceByAddress::{address}";
+            var callerID = $"{nameof(GetBalanceByAddress)}::{address}";
 
             // Get from a partial cache
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -408,7 +419,7 @@ namespace IOTAGears.Services
         public async Task<Bundle> GetBundleByTransaction(string hash)
         {
             // get a list of transactions to the given address
-            var callerID = $"GetBundleByTransaction::{hash}";
+            var callerID = $"{nameof(GetBundleByTransaction)}::{hash}";
 
             // Get from a partial cache
             var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
@@ -424,7 +435,6 @@ namespace IOTAGears.Services
                 {
                     _Logger.LogInformation("Performing external API call GetBundleByTransaction for a single hash... via node {_ActualNodeServer}", _ActualNodeServer);
                     res = await _repo.GetBundleAsync(new Hash(hash));
-
                     _Logger.LogInformation("External API call... Finished");
                 }
                 catch (Exception e)
