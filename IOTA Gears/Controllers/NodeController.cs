@@ -37,7 +37,7 @@ namespace IOTAGears.Controllers
         [HttpGet("[action]")]
         [CacheTangleResponse(
             LifeSpan = 20,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]

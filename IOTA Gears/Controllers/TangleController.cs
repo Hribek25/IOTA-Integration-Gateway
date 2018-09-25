@@ -44,7 +44,7 @@ namespace IOTAGears.Controllers
         [HttpGet("address/{address}/transactions")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
@@ -84,7 +84,7 @@ namespace IOTAGears.Controllers
         [HttpGet("bundle/{hash}/transactions")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
@@ -122,15 +122,17 @@ namespace IOTAGears.Controllers
         /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
         /// <response code="400">Incorect format of the address</response>
         /// <response code="504">Result is not available at the moment</response>
+        /// <response code="206">Partial results are returned. Number of transactions is limited to 500.</response>
         [HttpGet("address/{address}/transactions/details")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK, (int)HttpStatusCode.PartialContent })
             ]
         [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.PartialContent)]
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         public async Task<IActionResult> TransactionDetailsByAddress(string address, TransactionFilter filter)
 #pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
@@ -140,7 +142,7 @@ namespace IOTAGears.Controllers
                 return BadRequest("Incorect format of the address"); //return 400 error
             }
 
-            HashSet<TransactionContainer> res;
+            TxHashSetCollection res;
             try
             {
                 res = await _repository.Api.GetDetailedTransactionsByAddress(address);
@@ -149,7 +151,7 @@ namespace IOTAGears.Controllers
             {
                 _logger.LogError(e, "Error occured in " + nameof(TransactionDetailsByAddress));
                 return StatusCode(504); //returns 504
-            }
+            }           
 
             List<TransactionContainer> sorted;
             if (filter == TransactionFilter.All)
@@ -160,7 +162,15 @@ namespace IOTAGears.Controllers
             { // only confirmed
                 sorted = (from i in res where (bool)i.IsConfirmed orderby i.Transaction.Timestamp descending select i).ToList();
             }
-            return Json(sorted);
+
+            if (res.CompleteSet)
+            {
+                return Json(sorted);
+            }
+            else
+            {
+                return StatusCode((int)HttpStatusCode.PartialContent, sorted);
+            }            
         }
 
 
@@ -171,16 +181,16 @@ namespace IOTAGears.Controllers
         /// <returns>List of transactions</returns>        
         /// <param name="filter">Filter criteria.<br />Default: ConfirmedOnly</param>
         /// <response code="400">Incorect format of the bundle hash</response>
-        /// <response code="504">Result is not available at the moment</response>
+        /// <response code="504">Result is not available at the moment</response>        
         [HttpGet("bundle/{hash}/transactions/details")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]        
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
         public async Task<IActionResult> TransactionDetailsByBundle(string hash, TransactionFilter filter)
 #pragma warning restore CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
@@ -227,7 +237,7 @@ namespace IOTAGears.Controllers
         [HttpGet("address/{address}/balance")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType(typeof(AddressWithBalances), (int)HttpStatusCode.OK)]
@@ -265,7 +275,7 @@ namespace IOTAGears.Controllers
         [HttpGet("transaction/{hash}")]
         [CacheTangleResponse(
             LifeSpan = 45,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType(typeof(List<TransactionContainer>), (int)HttpStatusCode.OK)]

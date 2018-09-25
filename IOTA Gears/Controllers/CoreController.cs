@@ -17,19 +17,19 @@ using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Configuration;
 
 namespace IOTAGears.Controllers
-{    
+{
     [Route("api/[controller]/[action]")]
     public class CoreController : Controller
     {
         private readonly Logger<CoreController> _logger;
         private readonly IConfiguration _conf;
-        
+
         //CTOR
         public CoreController(ILogger<CoreController> logger, IConfiguration configuration) // dependency injection
         {
             //_repository = (TangleRepository)repo;
-            _logger = (Logger <CoreController>)logger;
-            _conf = configuration;            
+            _logger = (Logger<CoreController>)logger;
+            _conf = configuration;
         }
         //CTOR
 
@@ -46,7 +46,7 @@ namespace IOTAGears.Controllers
         [HttpGet()]
         [CacheTangleResponse(
             LifeSpan = 30,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[]{(int)HttpStatusCode.OK})
             ]
         [Produces("application/json")]        
         [ProducesResponseType(typeof(GatewayStatus), (int)HttpStatusCode.OK)]
@@ -70,7 +70,7 @@ namespace IOTAGears.Controllers
         [HttpGet()]
         [CacheTangleResponse(
             LifeSpan = 3600,
-            StatusCode = (int)HttpStatusCode.OK)
+            StatusCodes = new int[] { (int)HttpStatusCode.OK })
             ]
         [Produces("application/json")]
         [ProducesResponseType(typeof(NodeTree), (int)HttpStatusCode.OK)]

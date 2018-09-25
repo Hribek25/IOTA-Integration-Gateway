@@ -142,7 +142,7 @@ namespace IOTAGears.Services
             }            
             return cacheEntry;
         }
-        public async Task AddFSCacheEntryAsync(string request, JsonResult result, string contentType)
+        public async Task AddFSCacheEntryAsync(string request, ObjectResult result, string contentType)
         {
             var hashcallerid = CacheEntryFingerPrint(request, contentType);
             var targetDir = GetCacheSubDir(hashcallerid.Substring(0, 2)); // create and return target sub directory

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
 
 namespace IOTAGears.ActionFilters
 {
@@ -13,13 +14,13 @@ namespace IOTAGears.ActionFilters
     {
         public bool IsReusable => false;
         public int LifeSpan { get; set; } = 300;
-        public int StatusCode { get; set; } = 200;
+        public int[] StatusCodes { get; set; } = { 200 };
 
         public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => new CacheFilter(logger: serviceProvider.GetService<ILoggerFactory>().CreateLogger<CacheFilter>())
         {
             DBManager = (Services.DBManager)serviceProvider.GetService<Services.IDBManager>(),
             CacheLifeSpan = LifeSpan,
-            StatusCode = StatusCode
+            StatusCodes = StatusCodes
         };
 
         private class CacheFilter : IAsyncResourceFilter
@@ -27,7 +28,7 @@ namespace IOTAGears.ActionFilters
             public Services.DBManager DBManager { get; set; } = null;
             public int CacheLifeSpan { get; set; }
             public ILogger<CacheFilter> Logger { get; }
-            public int StatusCode { get; set; } = 200;
+            public int[] StatusCodes { get; set; }
 
             private void GetThreadInfo()
             {
@@ -69,13 +70,13 @@ namespace IOTAGears.ActionFilters
 
                     if (c == null) // nothing was in cache and so storing results to cache
                     {
-                        if (!resultContext.Canceled && resultContext.HttpContext.Response.StatusCode == StatusCode && resultContext.Result is Microsoft.AspNetCore.Mvc.JsonResult)
+                        if (!resultContext.Canceled && StatusCodes.Contains(resultContext.HttpContext.Response.StatusCode))
                         {
                             //only if JSON result and sucessfull call
                             // Write response to cache
                             await DBManager.AddFSCacheEntryAsync(
                                 callerID, // request
-                                (Microsoft.AspNetCore.Mvc.JsonResult)resultContext.Result, //result
+                                (ObjectResult)resultContext.Result, //result
                                 resultContext.HttpContext.Response.ContentType //content type                                
                                 );
                             Logger.LogInformation("New entry to CACHE for Request: {context.HttpContext.Request.Path}", context.HttpContext.Request.Path);
