@@ -118,10 +118,10 @@
                     <div class="col-md-8">
                         <h1 class="display-3"><span class="text-monospace">IO</span>::Gateway</h1>
                         <p class="lead text">
-                            Integrate IOTA protocol with business workflows, tools and components that are used everyday.
-                            <span class="text-primary font-weight-bold">Effortlessly.</span>
-                            <span class="text-success font-weight-bold">Everywhere.</span>
-                            <span class="text-warning font-weight-bold">Non-Devs Friendly.</span>
+                            Integrate IOTA protocol with business workflows, tools, and components that are used everyday.
+                            <span class="text-primary font-weight-bold">Effortlessly!</span>
+                            <span class="text-success font-weight-bold">Everywhere!</span>
+                            <span class="text-warning font-weight-bold">Non-Devs Friendly!</span>
                         </p>
                         <hr class="my-2" />
                         <div id="badges">
@@ -157,23 +157,23 @@
                 <div class="col-md-4 text-center">
                     <h2>High-Level Access</h2>
                     <p>
-                        Structured set of API calls developed on top of the IOTA protocol providing a high-level abstraction over IOTA network for everyone to use and leverage.
-                        It provides a wide range of commands keeping needs of non-dev users in mind. You do not have to be a developer to be able to use it and leverage it.
-                        Implementation details of IOTA protocol are hidden under the hood.
+                        Structured set of API calls developed on top of the IOTA protocol provides a high-level abstraction over the IOTA network for everyone to use and leverage.
+                        It affords a wide range of commands, keeping needs of non-dev users in mind. You do not have to be a developer to be able to use and leverage it.
+                        All implementation details of the IOTA protocol are hidden under the hood.
                     </p>
                 </div>
                 <div class="col-md-4 text-center">
                     <h2>Standard Protocol</h2>
                     <p>
-                        It implements user-friendly and standard API framework based on <code>{REST}</code> and so it is able to interact with a majority of business-related tools that are used nowadays.
-                        In other words, it is a glue that integrates disparate components together. In addition to that, Cross-Origin Resource Sharing (CORS) is enabled by default and so you can leverage Gateway from your web sites.
+                        It implements user-friendly and standard API framework based on <code>{REST}</code>, therefore, it is able to interact with a majority of business-related tools that are used nowadays.
+                        In other words, it is a glue that integrates disparate components together. In addition to that, Cross-Origin Resource Sharing (CORS) is enabled by default, so you can leverage Gateway from your web sites.
                     </p>
                 </div>
                 <div class="col-md-4 text-center">
-                    <h2>Open Source Fullstack</h2>
+                    <h2>Open Source Full-Stack</h2>
                     <p>
-                        It is an open-source and multiplatform project. You don't have to rely on public endpoints and you can easily deploy it on your premises and infrastructure. It can be completely hidden within your private network if needed.
-                        You do not have to deploy any IOTA-specific infrastructure components since the gateway can leverage IOTA public nodes. No extra requirements are needed.
+                        It is an open-source and multiplatform project. You do not have to rely on public endpoints and you can easily deploy it on your premises and infrastructure. It can be completely hidden within your private network, if needed.
+                        You do not have to deploy any IOTA-specific infrastructure components, since the gateway can leverage IOTA public nodes. No extra SW requirements are needed.
                     </p>
                 </div>
             </div>
@@ -184,15 +184,15 @@
                     <h2>Smart Caching</h2>
                     <p>
                         The gateway implements a multi-level caching system to optimize a number of calls over IOTA network. It pulls only new information from the network, the rest is served from the long-term cache to minimize latency.
-                        Needless to say, the gateway was designed with IOTA protocol in mind and so it smartly caches only elements for which it is valid to do so.
+                        In addition, the gateway was designed with the IOTA protocol in mind, so it smartly caches only elements for which it is approved to do so.
                     </p>
                 </div>
                 <div class="col-md-6  text-center">
                     <h2>Extensible</h2>
                     <p>
-                        The gateway can be easily used from DevOps tools (ex. PowerShell, Linux shell), productivity suites (ex. Excel), business intelligence tools (ex. PowerBI) or other integration platforms and business-related platforms, such as Office 365.
-                        The system is open and extensible. New interfaces are being developed to serve some specific requirements of other integration platforms such as MS Flow or IFTTT.com.
-                        So in the future, it will be even easier to interact with IOTA network.
+                        The gateway can be easily used from the DevOps tools (e.g., PowerShell, Linux shell), productivity suites (e.g., Excel), business intelligence tools (e.g., PowerBI) or other integration platforms and business-related platforms, such as Office 365.
+                        The system is opened and extensible. New interfaces are being developed to serve some specific requirements of other integration platforms, such as the MS Flow or IFTTT.com.
+                        Thus, in the future, it will be even easier to interact with the IOTA network.
                     </p>
                 </div>
             </div>
@@ -216,43 +216,43 @@
                     <dl>
                         <dt>Documentation</dt>
                         <dd>
-                            All API calls are documented using Open API standard (Swagger). It is available as a standalone file in a structured JSON definition
+                            All API calls are documented, using Open API standard (Swagger). It is available as a stand-alone file in the structured JSON definition
                             and as an interactive API explorer.
                         </dd>
 
                         <dt>Interfaces (Entry Points)</dt>
                         <dd>
-                            An interface provides you with a definition of high-level API calls that encapsulate specific calls over IOTA network.
-                            Those calls are hidden under the hood and so users do not have to worry about implementation details.
-                            The interface layer is decoupled from the application business logic. This design enables us to prepare multiple interfaces targetted different purposes.
+                            An interface provides you with a definition of high-level API calls that encapsulate specific calls over the IOTA network.
+                            Those calls are hidden under the hood, so the users do not have to worry about implementation details.
+                            The interface layer is decoupled from the application business logic. This design enables us to prepare multiple interfaces targeting different purposes.
                         </dd>
 
                         <dt>Cache Layer</dt>
                         <dd>
-                            Some responses are automatically cached for the given period of time (seconds/minutes) so users do not have to worry much about effectiveness of their integration use cases.
+                            Some responses are automatically cached for a given period of time (e.g., seconds or minutes), so the users do not have to worry much about effectiveness of their use cases.
                             Any subsequent calls are served from the short-term cache to minimize their latency.
                         </dd>
 
                         <dt>API Controllers</dt>
-                        <dd>It contains application business logic and it is provided in a form of shared services across the application.</dd>
+                        <dd>They contain application business logic and they are provided in a form of shared services across the application.</dd>
 
                         <dt>Storage Layer</dt>
                         <dd>
-                            Public API calls usually involve several chained calls over IOTA network and so they may be quite expensive (in terms of time needs).
-                            The application stores some elements (objects) returned from the IOTA network (confirmed transactions, transaction trytes, etc.) in order to minimize number of calls over the network.
-                            It enables to effectively pulling only new information from the Tangle (only new transactions, etc.) and merging new object with old ones.
+                            Public API calls usually involve several chained calls over the IOTA network, therefore,  they may be quite expensive (in terms of time needs).
+                            The application stores some elements (objects) returned from the IOTA network (e.g., confirmed transactions, transaction trytes, etc.) in order to minimize number of calls over the network.
+                            It enables to effectively pull only new information from the Tangle (only new transactions, etc.) and merge new objects with old ones.
                         </dd>
 
                         <dt>IOTA Network</dt>
                         <dd>
-                            The component is designed in order to leverage a pool of public IOTA nodes and so it is not necessary to deploy any IOTA nodes in order to deploy the gateway.
-                            There is a background health-check process that periodically checks all IOTA nodes in the pool to minimize unsuccesfull calls over IOTA network.
+                            The component is designed to leverage a pool of public IOTA nodes and so it is not necessary to deploy any IOTA nodes in order to deploy the gateway.
+                            There is a background health-check process that periodically checks all IOTA nodes in the pool to minimize unsuccesfull calls over the IOTA network.
                         </dd>
 
                         <dt>Background Pipeline Worker</dt>
                         <dd>
-                            Some tasks may be very time demanding (ex. sending transaction, monitoring callbacks, etc.) and so they are added to a pipeline and are processed via an asynchronous process sequentially.
-                            The background worker can be also leveraged for auto-monitoring balances, auto-promoter, etc.
+                            Some tasks may be very time-demanding (e.g., sending transactions, monitoring callbacks, etc.), so they are added to a pipeline and are processed via an asynchronous process sequentially.
+                            The background worker can also be leveraged for the auto-monitoring balances, auto-promoter, etc.
                         </dd>
 
                     </dl>
@@ -268,20 +268,20 @@
                 <div class="col-md-5 offset-md-1">
                     <h5 class="text-info mt-3 font-weight-bold">Use Cases</h5>
                     <p>
-                        The Gateway provides additional interface layer on top of the standard IOTA protocol to enable additional integration use cases.
-                        It is provided as a fullstack deployment and so it can be easily installed in multiple instances anywhere even within virtual private networks and regardless operating system.
+                        The Gateway provides additional interface layer on top of the standard IOTA protocol to enable additional use cases.
+                        It is provided as a full-stack deployment and it can be easily installed in multiple instances anywhere, even within the virtual private networks, regardless operating system.
                     </p>
-                    <p>It is designed keeping in mind high-level business-oriented tools in which an usage of general purpose languages would be difficult or not possible at all.</p>
-                    <p>It enables use cases such as:</p>
+                    <p>The application design keeps in mind high-level business-oriented tools, in which the use of general purpose languages would be difficult or not possible at all.</p>
+                    <p>It enables to use cases such as:</p>
                     <ul>
                         <li>Checking IOTA balances in Excel</li>
-                        <li>Create business workflow that monitors IOTA transactions and triggers some follow up actions based on them</li>
+                        <li>Create business workflow that monitors the IOTA transactions and triggers some follow-up actions based on them</li>
                         <li>Do you need to send a transaction just from a command line? No problem at all</li>
-                        <li>No dependencies, no third-party libraries, just HTTP protocol</li>
-                        <li> ...Business Inteligence tools, Productivity Suites, ERPs, CRMs and all other can now leverage information from the IOTA network</li>
+                        <li>No dependencies, no third-party libraries, just the HTTP protocol</li>
+                        <li> ...Business Inteligence tools, Productivity Suites, ERPs, CRMs, and all other can now leverage information from the IOTA network</li>
                     </ul>
                     <blockquote class="blockquote">
-                        <p class="mb-0 mt-5 text-warning">Let's interact with IOTA network as easy as creating directories.</p>
+                        <p class="mb-0 mt-5 text-warning">Let's interact with the IOTA network as easily as creating directories!</p>
                         <footer class="blockquote-footer font-italic">Our Mission</footer>
                     </blockquote>
                 </div>
@@ -347,7 +347,7 @@ in
             <div class="container">
                 <div class="row">
                     <div class="col-md-10">
-                        <p>Donations to improve the project and support public endpoints are welcome:<br /><small style="word-wrap:break-word !important;">BMEX9NSLDVBPROARUYPAHSTQBSWNKCGLGPASYSPPUBOEHZNTP9NFEGCEXDRAHKCAFNTYFMGWRMGQKRLXZRLWUQTVM9</small></p>
+                        <p>Donations to improve the project and support public endpoints are appreciated:<br /><small style="word-wrap:break-word !important;">BMEX9NSLDVBPROARUYPAHSTQBSWNKCGLGPASYSPPUBOEHZNTP9NFEGCEXDRAHKCAFNTYFMGWRMGQKRLXZRLWUQTVM9</small></p>
                         <p>Feel free to contact author via <a href="https://github.com/Hribek25/IOTA-Integration-Gateway" class="text-light" style="text-decoration:underline;">Github</a> or <a href="https://ecosystem.iota.org/projects/iota-integration-gateway" class="text-light" style="text-decoration:underline;">IOTA Ecosystem</a>.</p>
                     </div>
                     <div class="col-md-2">
