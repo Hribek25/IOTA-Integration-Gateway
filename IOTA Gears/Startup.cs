@@ -28,14 +28,20 @@ namespace IOTAGears
         {
             services.AddMvc();
 
-            // xxHash service            
+            // xxHash service
             services.AddSingleton(xxHashFactory.Instance.Create());
 
             // Node Manager
             services.AddSingleton<INodeManager, NodeManager>();
             
-            // DB Manager
-            services.AddTransient<IDBManager, DBManager>();
+            // DB Storage Manager
+            services.AddTransient<IDbStorageManager, DbStorageManager>();
+
+            // FS Storage Manager
+            services.AddSingleton<IFsStorageManager, FsStorageManager>();
+
+            // External Tangle Repo
+            services.AddTransient<IExternalApiTangleRepository, ExternalApiTangleRepository>();
 
             // Tangle Repo
             services.AddTransient<ITangleRepository, TangleRepository>();
@@ -79,18 +85,15 @@ namespace IOTAGears
             {
                 options.ForwardedHeaders =
                     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost ;
-            });
-            
+            });            
         }
 
 #pragma warning disable CA1822 // Member Configure does not access instance data and can be marked as static
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env)
         {
-
             app.UseCors("AllowAllOrigins");
             app.UseForwardedHeaders(); // I assume it is placed behind the proxy
-
 
             if (env.IsDevelopment())
             {

@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using RestSharp;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Configuration;
+using MessagePack;
 
 namespace IOTAGears.Controllers
 {
@@ -23,13 +24,15 @@ namespace IOTAGears.Controllers
     {
         private readonly Logger<CoreController> _logger;
         private readonly IConfiguration _conf;
+        private readonly TangleRepository _repo;
 
         //CTOR
-        public CoreController(ILogger<CoreController> logger, IConfiguration configuration) // dependency injection
+        public CoreController(ILogger<CoreController> logger, IConfiguration configuration, ITangleRepository repo) // dependency injection
         {
             //_repository = (TangleRepository)repo;
             _logger = (Logger<CoreController>)logger;
             _conf = configuration;
+            _repo = (TangleRepository)repo;
         }
         //CTOR
 
@@ -56,6 +59,15 @@ namespace IOTAGears.Controllers
             return Json(res); // Format the output
         }
 
+
+        //[HttpGet()]        
+        //[Produces("application/json")]        
+        //public async Task<IActionResult> TestBin()
+        //{
+        //    var Address = "CYJV9DRIE9NCQJYLOYOJOGKQGOOELTWXVWUYGQSWCNODHJAHACADUAAHQ9ODUICCESOIVZABA9LTMM9RW";
+        //    var res = await _repo.Api.GetDetailedTransactionsByAddress(Address);
+        //    return Content(BinSerializer.Serialize(res));                       
+        //}
 
         // GET api/core/ApiMapCalls
         /// <summary>

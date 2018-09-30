@@ -62,7 +62,7 @@ namespace IOTAGears.Controllers
             try
             {
                 // get a list of transactions to the given address
-                res = await _repository.Api.GetTransactionsByAddress(address);
+                res = await _repository.GetTransactionsByAddress(address);
             }
             catch (Exception e)
             {
@@ -101,7 +101,7 @@ namespace IOTAGears.Controllers
             try
             {
                 // get a list of transactions to the given address
-                res = await _repository.Api.GetTransactionsByBundle(hash);
+                res = await _repository.GetTransactionsByBundle(hash);
             }
             catch (Exception e)
             {
@@ -145,7 +145,7 @@ namespace IOTAGears.Controllers
             TxHashSetCollection res;
             try
             {
-                res = await _repository.Api.GetDetailedTransactionsByAddress(address);
+                res = await _repository.GetDetailedTransactionsByAddress(address);
             }
             catch (Exception e)
             {
@@ -203,7 +203,7 @@ namespace IOTAGears.Controllers
             HashSet<TransactionContainer> res;
             try
             {
-                res = await _repository.Api.GetDetailedTransactionsByBundle(hash);
+                res = await _repository.GetDetailedTransactionsByBundle(hash);
             }
             catch (Exception e)
             {
@@ -254,7 +254,7 @@ namespace IOTAGears.Controllers
             try
             {
                 // get a list of transactions to the given address
-                res = await _repository.Api.GetBalanceByAddress(address);
+                res = await _repository.GetBalanceByAddress(address);
             }
             catch (Exception e)
             {
@@ -292,7 +292,7 @@ namespace IOTAGears.Controllers
             try
             {
                 // get a list of transactions to the given address
-                res = await _repository.Api.GetDetailedTransactionByHash(hash);
+                res = await _repository.GetDetailedTransactionByHash(hash);
             }
             catch (Exception e)
             {
@@ -340,7 +340,7 @@ namespace IOTAGears.Controllers
             PipelineStatus res;
             try
             {
-                res = await _repository.Api.AddTransactionToPipeline(address, message, Request);
+                res = await _repository.AddTransactionToPipeline(address, message, Request);
             }
             catch (Exception e)
             {

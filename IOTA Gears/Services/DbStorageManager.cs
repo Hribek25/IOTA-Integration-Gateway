@@ -2,47 +2,44 @@
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 using IOTAGears.EntityModels;
 using System.Data.Common;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
-using System.Data.HashFunction;
-using System.Linq;
 using System.Data.HashFunction.xxHash;
 
 namespace IOTAGears.Services
 {
-    public interface IDBManager
+    public interface IDbStorageManager
     {
-         DbConnection DBConnection { get; }         
+        DbConnection DBConnection { get; }
+        Logger<DbStorageManager> Logger { get; }
+        IConfiguration Configuration { get; }
+        DbLayerProvider DbProvider { get; }
+        //IxxHash HashFunction { get; }
     }
     
-    public class DBManager : IDBManager, IDisposable
+    public class DbStorageManager : IDbStorageManager, IDisposable
     {
-        public DbConnection DBConnection { get; private set; }
-        private Logger<DBManager> Logger { get; set; }
-        private IConfiguration Configuration { get; set; }
-        private DbLayerProvider DbProvider { get; }
-        private IxxHash _xxHash { get; }
+        public DbConnection DBConnection { get; }
+        public Logger<DbStorageManager> Logger { get;  }
+        public IConfiguration Configuration { get; }
+        public DbLayerProvider DbProvider { get; }
+        //public IxxHash HashFunction { get; }
 
         private bool disposed = false;
         private readonly int AbuseTimeInterval = 60; // interval (number of seconds) to check an abuse usage
         private readonly int AbuseCount = 3; // max number of requests from the same IP within the AbuseTimeInterval
 
-        public DBManager(ILogger<DBManager> logger, IConfiguration conf, IxxHash hashprovider)
+        public DbStorageManager(ILogger<DbStorageManager> logger, IConfiguration conf)
         {
             Configuration = conf;
-            Logger = (Logger<DBManager>)logger;
+            Logger = (Logger<DbStorageManager>)logger;
             this.DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
             var DbConnStr = conf.GetValue<string>("SqlDbConnStr");
             string connStr;
-            _xxHash = hashprovider;
+            //HashFunction = hashprovider;
 
             if (DbProvider==DbLayerProvider.Sqlite)
             {
@@ -64,134 +61,8 @@ namespace IOTAGears.Services
             }            
 
             DBConnection = DbConn;
-            Logger.LogInformation("DB storage initiated and ready... Using {DbProvider.ToString()}, source: {DBConnection.DataSource}", DbProvider.ToString(), DBConnection.DataSource);
-        }
-
-        private string GetCacheSubDir(string subDir)
-        {            
-            var target = Path.Combine(Program.CacheBasePath(), subDir);
-            if (Directory.Exists(target))
-            {
-                return target;
-            }
-            else
-            {
-                try
-                {
-                    Directory.CreateDirectory(target);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError("Can't create sub cache directory {target}. Error {e}", target, e.Message);
-                    return null;
-                }
-                return target;
-            }
-        }
-        private string GetElementCacheSubDir(string subDir)
-        {
-            var target = Path.Combine(Program.CacheElementsBasePath(), subDir);
-            if (Directory.Exists(target))
-            {
-                return target;
-            }
-            else
-            {
-                try
-                {
-                    Directory.CreateDirectory(target);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError("Can't create sub cache directory {target}. Error {e}", target, e.Message);
-                    return null;
-                }
-                return target;
-            }
-        }
-        private string CacheEntryFingerPrint(string request, string contentType)
-        {
-            var cnttype = contentType.Split(";")[0].Replace(" ","", StringComparison.InvariantCulture); // this is workqround in case there is also encoding specified in content type
-            var callerid = (request + cnttype).ToUpperInvariant();
-            var hsh = this._xxHash.ComputeHash(callerid).AsHexString();
-            return hsh;
-        }
-        private string CacheElementEntryFingerPrint(string callerId)
-        {            
-            var callerid = callerId.ToUpperInvariant();
-            var hsh = this._xxHash.ComputeHash(callerid).AsHexString();
-            return hsh;
-        }
-
-        public async Task<JsonResult> GetFSCacheEntryAsync(string request, string contentType, int LifeSpan)
-        {
-            var hashcallerid = CacheEntryFingerPrint(request, contentType);            
-            var targetDir = GetCacheSubDir(hashcallerid.Substring(0,2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hashcallerid.Substring(2)); // target file incl full path 
-
-            JsonResult cacheEntry = null; // default return value
-            if (File.Exists(targetFile)) // there is cache entry
-            {
-                TimeSpan actualSpan = DateTime.UtcNow - File.GetLastWriteTimeUtc(targetFile);
-                if (actualSpan.TotalSeconds <= LifeSpan) // cache entry is still quite fresh, so leveraging it
-                {
-                    var jsdata = await File.ReadAllTextAsync(targetFile);
-                    var tmp = DBSerializer.DeserializeFromJson(jsdata);
-                    cacheEntry = new JsonResult(tmp);
-                }                 
-            }            
-            return cacheEntry;
-        }
-        public async Task AddFSCacheEntryAsync(string request, object result, string contentType)
-        {
-            var hashcallerid = CacheEntryFingerPrint(request, contentType);
-            var targetDir = GetCacheSubDir(hashcallerid.Substring(0, 2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hashcallerid.Substring(2)); // target file incl full path 
-
-            string json = null;
-            if (result is ObjectResult)
-            {
-                json = DBSerializer.SerializeToJson((result as ObjectResult).Value);
-            }
-            if (result is JsonResult)
-            {
-                json = DBSerializer.SerializeToJson((result as JsonResult).Value);
-            }
-
-            if (!(json is null))
-            {
-                await File.WriteAllTextAsync(targetFile, json);
-            }            
-        }
-        public async Task<object> GetFSPartialCacheEntryAsync(string call)
-        {
-            var hshcall = CacheElementEntryFingerPrint(call);
-            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
-
-            object OutputCacheEntry = null;
-
-            if (File.Exists(targetFile)) // there is cache entry
-            {
-                var jsdata = await File.ReadAllTextAsync(targetFile);
-                OutputCacheEntry = DBSerializer.DeserializeFromJson(jsdata);
-            }
-
-            Logger.LogInformation("Partial cache used (GET) for individual element. {OutputCacheEntry?.GetType()} was loaded for the caller: {call}.", OutputCacheEntry?.GetType(), call.Substring(0, 50));
-            return OutputCacheEntry;
-        }
-
-        public async Task AddFSPartialCacheEntryAsync(string call, object result)
-        {
-            var hshcall = CacheElementEntryFingerPrint(call);
-            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
-
-            var json = DBSerializer.SerializeToJson(result);
-            await File.WriteAllTextAsync(targetFile, json);            
-
-            Logger.LogInformation("Partial cache used (ADD) for an individual element. {result.GetType()} object was saved for the caller {call}.", result.GetType(), call.Substring(0, 50));
-        }
+            Logger.LogInformation("DB Storage initiated and ready... Using {DbProvider.ToString()}, source: {DBConnection.DataSource}", DbProvider.ToString(), DBConnection.DataSource);
+        }                
         
         public async Task<Int64> AddDBTaskEntryAsync(string task, object input, string ip, string globaluid)
         {
@@ -230,7 +101,7 @@ namespace IOTAGears.Services
                     {
                         var entry = new TaskEntry()
                         {
-                            Input = (TaskEntryInput)DBSerializer.DeserializeFromJson((string)reader["input"]),
+                            Input = (TaskEntryInput)JsonSerializer.DeserializeFromJson((string)reader["input"]),
                             Task = (string)reader["task"],
                             Timestamp = (long)reader["timestamp"],
                             GlobalId = (string)reader["guid"]
@@ -253,43 +124,7 @@ namespace IOTAGears.Services
             DBConnection.Close();
 
             Logger.LogInformation("Task pipeline (UPDATE) for an individual element. Rowid {guid} was updated with status {performed}.", globalid, performed);
-        }
-
-        public async Task<Dictionary<string, object>> GetFSPartialCacheEntriesAsync(string call)
-        {
-            var hshcall = CacheElementEntryFingerPrint(call);
-            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
-
-            Dictionary<string, object> OutputCacheEntry = null;
-
-            if (File.Exists(targetFile)) // there is cache entry
-            {
-                var jsdata = await File.ReadAllTextAsync(targetFile);
-                OutputCacheEntry = (Dictionary<string, object>)DBSerializer.DeserializeFromJson(jsdata);
-            }
-            
-            Logger.LogInformation("Partial cache used (GET) for multiple elements. {OutputCacheEntry.Count} records were loaded for the caller {call}.", OutputCacheEntry.Count, call.Substring(0, 50));
-            return OutputCacheEntry.Count == 0 ? null : OutputCacheEntry;
-        }
-        public async Task AddFSPartialCacheEntriesAsync(string call, IEnumerable<object> results, Func<object, string> identDelegate)
-        {
-            if (identDelegate == null)
-            {
-                throw new ArgumentNullException(paramName: nameof(identDelegate));
-            }
-
-            var hshcall = CacheElementEntryFingerPrint(call);
-            var targetDir = GetElementCacheSubDir(hshcall.Substring(0, 2)); // create and return target sub directory
-            var targetFile = Path.Combine(targetDir, hshcall.Substring(2)); // target file incl full path 
-
-            Dictionary<string, object> elements = (from i in results select i ).ToDictionary(a => identDelegate(a), b => b);
-            
-            var json = DBSerializer.SerializeToJson(elements);
-            await File.WriteAllTextAsync(targetFile, json);
-            
-            Logger.LogInformation("Partial cache used (ADD) for multiple elements. {elements.Count} records were saved for the caller {call}.", elements.Count, call.Substring(0, 50));
-        }
+        }        
 
         #region SQLHelpers
         
@@ -380,7 +215,7 @@ namespace IOTAGears.Services
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
-            var json_result = DBSerializer.SerializeToJson(input);
+            var json_result = JsonSerializer.SerializeToJson(input);
 
             if (this.DbProvider == DbLayerProvider.Sqlite)
             {
@@ -422,7 +257,7 @@ namespace IOTAGears.Services
             var c = DBConnection.CreateCommand();
             c.CommandText = cmd;
 
-            var json_result = DBSerializer.SerializeToJson(result);
+            var json_result = JsonSerializer.SerializeToJson(result);
 
             if (this.DbProvider == DbLayerProvider.Sqlite)
             {

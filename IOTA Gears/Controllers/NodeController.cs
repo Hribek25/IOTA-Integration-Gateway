@@ -47,7 +47,7 @@ namespace IOTAGears.Controllers
             NodeInfo res;
             try
             {
-                res = await _repository.Api.GetNodeInfoAsync();
+                res = await _repository.GetNodeInfoAsync();
             }
             catch (Exception e)
             {

@@ -17,7 +17,7 @@ namespace IOTAGears.Services
     {
         private readonly Logger<TimedBackgroundService> _logger;
         private readonly NodeManager _nodemanager;
-        private readonly DBManager _db;
+        private readonly DbStorageManager _db;
         private Timer _timerHealthCheck;
         private Timer _timerPipelineTasks = null;
         private bool HealthCheckingInProgress = false;
@@ -28,11 +28,11 @@ namespace IOTAGears.Services
         private readonly object balanceLock = new object();
         private bool disposed = false;
 
-        public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDBManager dbmanager)
+        public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDbStorageManager dbmanager)
         {
             _logger = (Logger<TimedBackgroundService>)logger;
             _nodemanager = (NodeManager)nodemanager;
-            _db = (DBManager)dbmanager;
+            _db = (DbStorageManager)dbmanager;
             _logger.LogInformation("Background Service initialized.");
         }
 

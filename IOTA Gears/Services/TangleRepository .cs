@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using RestSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,8 +8,6 @@ using Tangle.Net.Repository;
 using Tangle.Net.Repository.DataTransfer;
 using Tangle.Net.Entity;
 using IOTAGears.EntityModels;
-using Tangle.Net.Utils;
-using Tangle.Net.ProofOfWork.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 
@@ -19,63 +15,28 @@ namespace IOTAGears.Services
 {
     public interface ITangleRepository
     {
-        ApiTasks Api { get; }
-        NodeManager NodeManager { get; }
-        DBManager DB { get; }
+        DbStorageManager DB { get; }
         Logger<TangleRepository> Logger { get; }
         TimedBackgroundService TimedBackgroundService { get; }
-        string ActualNodeServer { get; }
+        ExternalApiTangleRepository Repo { get; }
+        FsStorageManager FS { get; }
     }
 
     public class TangleRepository : ITangleRepository
     {
-        public ApiTasks Api { get; }
-        public NodeManager NodeManager { get; }
-        public DBManager DB { get; }
+        public DbStorageManager DB { get; }
+        public FsStorageManager FS { get; }
         public Logger<TangleRepository> Logger { get; }
         public TimedBackgroundService TimedBackgroundService { get; }
-        public string ActualNodeServer { get; }
+        public ExternalApiTangleRepository Repo { get; }
 
-        public TangleRepository(ILogger<TangleRepository> logger, INodeManager nodemanager, IDBManager dBManager, IHostedService timedbackgroundservice)
+        public TangleRepository(ILogger<TangleRepository> logger, IDbStorageManager dBManager, IHostedService timedbackgroundservice, IExternalApiTangleRepository repository, IFsStorageManager fsStorageManager)
         {
-            NodeManager = (NodeManager)nodemanager;
             Logger = (Logger<TangleRepository>)logger;
-            DB = (DBManager)dBManager;
+            DB = (DbStorageManager)dBManager;
             TimedBackgroundService = (TimedBackgroundService)timedbackgroundservice;
-
-            var node = NodeManager.SelectNode(); // TODO: add some smart logic for node selection - round robin?
-            ActualNodeServer = node ?? throw new Exception("There is not a NODE to deal with...");
-
-            Api = new ApiTasks(
-                InitRestClient(node),
-                this
-                );
-        }
-
-        private RestIotaRepository InitRestClient(string node)
-        {
-            var res = new RestIotaRepository(new RestClient(node) { Timeout = 10000 });
-            Logger.LogInformation("TangleRepository initiated... selected node: {node}", node);
-            return res;
-        }
-
-    }
-
-    public class ApiTasks
-    {
-        private RestIotaRepository _repo { get; }
-        private DBManager _DB { get; }
-        private Logger<TangleRepository> _Logger { get; }
-        private string _ActualNodeServer { get; }
-        private TimedBackgroundService _TimedBackgroundService { get; }
-
-        public ApiTasks(RestIotaRepository repo, TangleRepository parent)
-        {
-            _repo = repo;
-            _DB = parent.DB;
-            _Logger = parent.Logger;
-            _ActualNodeServer = parent.ActualNodeServer;
-            _TimedBackgroundService = parent.TimedBackgroundService;
+            Repo = (ExternalApiTangleRepository)repository;
+            FS = (FsStorageManager)fsStorageManager;
         }
 
         public async Task<NodeInfo> GetNodeInfoAsync()
@@ -83,9 +44,7 @@ namespace IOTAGears.Services
             NodeInfo res;
             try
             {
-                _Logger.LogInformation("Performing external API call GetNodeInfo... via node {_ActualNodeServer}", _ActualNodeServer);
-                res = await _repo.GetNodeInfoAsync();
-                _Logger.LogInformation("External API call... Finished.");
+                res = await Repo.GetNodeInfoAsync();
             }
             catch (Exception)
             {
@@ -96,13 +55,13 @@ namespace IOTAGears.Services
 
         private async Task<HashSet<string>> GetLatestInclusionStates(string hash, HashSet<string> hashes) // non-public function
         {
-            if (hashes.Count == 0)  { return null; }
+            if (hashes.Count == 0) { return null; }
 
             // get a list of confirmed TXs to the given address
             var callerID = $"{nameof(GetLatestInclusionStates)}::{hash}";
 
             // Get from a partial cache - list of confirmed TX hashes
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             var CachedOutput = cached == null ? new HashSet<string>() : (HashSet<string>)cached;
             var loadedfromcache = CachedOutput.Count();
             hashes.ExceptWith(CachedOutput); // removing all hashes that were already confirmed
@@ -113,13 +72,10 @@ namespace IOTAGears.Services
             {
                 try
                 {
-                    _Logger.LogInformation("Performing external API call GetLatestInclusionStates for {hashes.Count} hashes... via node {_ActualNodeServer}", hashes.Count, _ActualNodeServer);
-                    res = await _repo.GetLatestInclusionAsync((from h in hashes select new Hash(h)).ToList());
-                    _Logger.LogInformation("External API call... Finished. Retuned {res.States.Count} states.", res.States.Count);
+                    res = await Repo.GetLatestInclusionAsync((from h in hashes select new Hash(h)).ToList());
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                     throw;
                 }
 
@@ -128,18 +84,17 @@ namespace IOTAGears.Services
                 if (OnlyNewlyConfirmedHashes.Count > 0)
                 {
                     CachedOutput.UnionWith(OnlyNewlyConfirmedHashes); // saving all back to the cache
-                    //Write to partial cache
-                    await _DB.AddFSPartialCacheEntryAsync(
+                                                                      //Write to partial cache
+                    await FS.AddFSPartialCacheEntryAsync(
                         call: callerID,
                         result: CachedOutput);
                 }
             }
 
-            _Logger.LogInformation("{callerID} in action. {loadedfromcache} confirmed hashes loaded from cache. {OnlyNewlyConfirmedHashes.Count} hashes were new ones.", callerID.Substring(0, 25), loadedfromcache, OnlyNewlyConfirmedHashes?.Count);
+            Logger.LogInformation("{callerID} in action. {loadedfromcache} confirmed hashes loaded from cache. {OnlyNewlyConfirmedHashes.Count} hashes were new ones.", callerID.Substring(0, 25), loadedfromcache, OnlyNewlyConfirmedHashes?.Count);
 
             //returning all from cache + new one from API call
             return CachedOutput;
-
         }
 
         public async Task<HashSet<string>> GetTransactionsByBundle(string bundleHash)
@@ -148,20 +103,17 @@ namespace IOTAGears.Services
             var callerID = $"{nameof(GetTransactionsByBundle)}::{bundleHash}";
 
             // Get from a partial cache
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             HashSet<string> CachedOutput = cached == null ? new HashSet<string>() : (HashSet<string>)cached;
 
             // Get info from node
             TransactionHashList res;
             try
             {
-                _Logger.LogInformation("Performing external API call FindTransactionsByBundles for a single address... via node {_ActualNodeServer}", _ActualNodeServer);
-                res = await _repo.FindTransactionsByBundlesAsync(new List<Hash>() { new Hash(bundleHash) });
-                _Logger.LogInformation("External API call... Finished. Retuned {res.Hashes.Count} hashes.", res.Hashes.Count);
+                res = await Repo.FindTransactionsByBundlesAsync(new List<Hash>() { new Hash(bundleHash) });
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -171,12 +123,12 @@ namespace IOTAGears.Services
             if (origCnt < CachedOutput.Count) // need to update the record
             {
                 //Write to partial cache
-                await _DB.AddFSPartialCacheEntryAsync(
+                await FS.AddFSPartialCacheEntryAsync(
                     call: callerID,
                     result: CachedOutput);
             }
 
-            _Logger.LogInformation("{callerID} in action. {origCnt} transaction hashes loaded from cache. {CachedOutput.Count} hashes in total.", callerID.Substring(0, 50), origCnt, CachedOutput.Count);
+            Logger.LogInformation("{callerID} in action. {origCnt} transaction hashes loaded from cache. {CachedOutput.Count} hashes in total.", callerID.Substring(0, 50), origCnt, CachedOutput.Count);
 
             return CachedOutput;
         }
@@ -187,20 +139,17 @@ namespace IOTAGears.Services
             var callerID = $"{nameof(GetTransactionsByAddress)}::{address}";
 
             // Get from a partial cache
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             HashSet<string> CachedOutput = cached == null ? new HashSet<string>() : (HashSet<string>)cached;
 
             // Get info from node
             TransactionHashList res;
             try
             {
-                _Logger.LogInformation("Performing external API call FindTransactionsByAddresses for a single address... via node {_ActualNodeServer}", _ActualNodeServer);
-                res = await _repo.FindTransactionsByAddressesAsync(new List<Address>() { new Address(address) });
-                _Logger.LogInformation("External API call... Finished. Retuned {res.Hashes.Count} hashes.", res.Hashes.Count);
+                res = await Repo.FindTransactionsByAddressesAsync(new List<Address>() { new Address(address) });
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
 
@@ -210,11 +159,11 @@ namespace IOTAGears.Services
             if (origCnt < CachedOutput.Count) // need to update the record
             {
                 //Write to partial cache
-                await _DB.AddFSPartialCacheEntryAsync(
+                await FS.AddFSPartialCacheEntryAsync(
                     call: callerID,
                     result: CachedOutput);
             }
-            _Logger.LogInformation("{callerID} in action. {origCnt} transaction hashes loaded from cache. {CachedOutput.Count} hashes in total.", callerID.Substring(0, 50), origCnt, CachedOutput.Count);
+            Logger.LogInformation("{callerID} in action. {origCnt} transaction hashes loaded from cache. {CachedOutput.Count} hashes in total.", callerID.Substring(0, 50), origCnt, CachedOutput.Count);
 
             return CachedOutput; //returning all from cache + new one from API call
         }
@@ -237,13 +186,13 @@ namespace IOTAGears.Services
             // Limited to 500 transactions.
             var TooMany = false;
 
-            if (trnList.Count>500)
+            if (trnList.Count > 500)
             {
                 trnList = trnList.Take(500).ToHashSet();
                 TooMany = true;
             }
-            
-            var res = await GetTransactionDetails(address, trnList);
+
+            var res = await this.GetTransactionDetails(address, trnList);
 
             if (TooMany)
             {
@@ -258,7 +207,7 @@ namespace IOTAGears.Services
 
             // GETTING DETAILS
 
-            return await GetTransactionDetails(hash, trnList);
+            return await this.GetTransactionDetails(hash, trnList);
         }
 
         public async Task<TxHashSetCollection> GetDetailedTransactionsByBundle(string bundleHash)
@@ -278,7 +227,7 @@ namespace IOTAGears.Services
 
             // GETTING DETAILS
 
-            return await GetTransactionDetails(bundleHash, trnList);
+            return await this.GetTransactionDetails(bundleHash, trnList);
         }
 
         private async Task<TxHashSetCollection> GetTransactionDetails(string hash, HashSet<string> transactionList)
@@ -286,7 +235,7 @@ namespace IOTAGears.Services
             var callerID = $"{nameof(GetTransactionDetails)}::{hash}";
 
             // Getting from a partial cache to speed up the second call
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             var CachedOutput = cached == null ? new HashSet<TransactionContainer>() : (HashSet<TransactionContainer>)cached;
 
             // list of non confirmed TX hashes returned from cache
@@ -297,7 +246,7 @@ namespace IOTAGears.Services
 
             // total list of TX hashes that have not been confirmed so far (incl. cache)
             CachedTXHashesNonConfirmed.UnionWith(transactionList);
-            
+
             // getting confirmation status - independent branch 1
             HashSet<string> confirmed;
             confirmed = await this.GetLatestInclusionStates(hash, CachedTXHashesNonConfirmed); // get list of confirmed TXs out of those non-confirmed so far
@@ -333,7 +282,7 @@ namespace IOTAGears.Services
 
             // adding cache entries to the final list
 
-            
+
             foreach (var item in CachedOutput)
             {
                 if (!(confirmed is null) && confirmed.Contains(item.Transaction.Hash.Value)) // updating also transactions in cache in case they were confirmed lately
@@ -343,15 +292,15 @@ namespace IOTAGears.Services
                 resTransactions.Add(item);
             }
 
-            if (resTransactions.Count>0) //TODO: add some clever condition whether it has been changed or not
+            if (resTransactions.Count > 0) //TODO: add some clever condition whether it has been changed or not
             {
                 //Write to partial cache
-                await _DB.AddFSPartialCacheEntryAsync(
+                await FS.AddFSPartialCacheEntryAsync(
                     call: callerID,
                     result: resTransactions);
-            }            
+            }
 
-            _Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transactions loaded from cache. {transactionList.Count} transactions were new ones.", callerID.Substring(0, 50), CachedOutput.Count, transactionList.Count);
+            Logger.LogInformation("{callerID} in action. {CachedOutput.Count} transactions loaded from cache. {transactionList.Count} transactions were new ones.", callerID.Substring(0, 50), CachedOutput.Count, transactionList.Count);
             return resTransactions;
         }
 
@@ -365,17 +314,12 @@ namespace IOTAGears.Services
             List<TransactionTrytes> trnTrytes;
             try
             {
-                _Logger.LogInformation("Performing external API calls GetTrytes for {OnlyNewHashes.Count} transactions... via node {_ActualNodeServer}", OnlyNewHashes.Count, _ActualNodeServer);
-                trnTrytes = await _repo.GetTrytesAsync((from t in OnlyNewHashes select new Hash(t)).ToList()); // get info about TXs
-                _Logger.LogInformation("External API call... Finished. Returned {trnTrytes.Count} trytes.", trnTrytes.Count);
+                trnTrytes = await Repo.GetTrytesAsync((from t in OnlyNewHashes select new Hash(t)).ToList()); // get info about TXs                
             }
-
-            catch (Exception e)
+            catch (Exception)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
-
             return trnTrytes;
         }
 
@@ -385,34 +329,29 @@ namespace IOTAGears.Services
             var callerID = $"{nameof(GetBalanceByAddress)}::{address}";
 
             // Get from a partial cache
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             var CachedOutput = (AddressWithBalances)cached;
 
             // Get info from node
             AddressWithBalances res;
             try
             {
-                _Logger.LogInformation("Performing external API call GetBalances for a single address... via node {_ActualNodeServer}", _ActualNodeServer);
-                res = await _repo.GetBalancesAsync(new List<Tangle.Net.Entity.Address>() { new Tangle.Net.Entity.Address(address) });
-                _Logger.LogInformation("External API call... Finished");
+                res = await Repo.GetBalancesAsync(new List<Tangle.Net.Entity.Address>() { new Tangle.Net.Entity.Address(address) });
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                 throw;
             }
-
             if (CachedOutput == null || CachedOutput.Addresses[0].Balance != res.Addresses[0].Balance) // balance has been changed - adding new one with a new timestamp
             {
                 //Write to partial cache
-                await _DB.AddFSPartialCacheEntryAsync(
+                await FS.AddFSPartialCacheEntryAsync(
                     call: callerID,
                     result: res); // Let's add actual balance
 
                 var prevBalance = CachedOutput == null ? -1 : CachedOutput.Addresses[0].Balance;
-                _Logger.LogInformation("{callerID} in action. Balance has changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID.Substring(0, 50), prevBalance, res.Addresses[0].Balance);
+                Logger.LogInformation("{callerID} in action. Balance has changed from the last time. It was {prevBalance} and now it is {res.Addresses[0].Balance}.", callerID.Substring(0, 50), prevBalance, res.Addresses[0].Balance);
             }
-
             return res;
         }
 
@@ -422,29 +361,25 @@ namespace IOTAGears.Services
             var callerID = $"{nameof(GetBundleByTransaction)}::{hash}";
 
             // Get from a partial cache
-            var cached = await _DB.GetFSPartialCacheEntryAsync(call: callerID);
+            var cached = await FS.GetFSPartialCacheEntryAsync(call: callerID);
             var CachedOutput = (Bundle)cached;
 
             // Get info from node
 
             Bundle res;
-
             if (CachedOutput == null)
             {
                 try
                 {
-                    _Logger.LogInformation("Performing external API call GetBundleByTransaction for a single hash... via node {_ActualNodeServer}", _ActualNodeServer);
-                    res = await _repo.GetBundleAsync(new Hash(hash));
-                    _Logger.LogInformation("External API call... Finished");
+                    res = await Repo.GetBundleAsync(new Hash(hash));
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    _Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                     throw;
                 }
 
                 //Write to partial cache
-                await _DB.AddFSPartialCacheEntryAsync(
+                await FS.AddFSPartialCacheEntryAsync(
                         call: callerID,
                         result: res);
                 return res;
@@ -461,22 +396,20 @@ namespace IOTAGears.Services
             var guid = Guid.NewGuid().ToString(); // unique ID of the task
             var ip = request.HttpContext.Connection.RemoteIpAddress.ToString();
 
-            // todo: abuse check 
-
-            var numberTasks = await _DB.AddDBTaskEntryAsync(task, new TaskEntryInput() { Address = address, Message = message, Tag = "IO9GATEWAY9CLOUD" }, ip, guid); //save the given prepared bundle to the pipeline
+            var numberTasks = await DB.AddDBTaskEntryAsync(task, new TaskEntryInput() { Address = address, Message = message, Tag = "IO9GATEWAY9CLOUD" }, ip, guid); //save the given prepared bundle to the pipeline
             if (numberTasks < 0)
             {
-                _Logger.LogInformation("Abuse usage in affect. IP: {ip}", ip);
+                Logger.LogInformation("Abuse usage in affect. IP: {ip}", ip);
                 return new PipelineStatus() { Status = StatusDetail.TooManyRequests }; // returning
             }
 
-            if (!_TimedBackgroundService.ProcessingTasksActive)
+            if (!TimedBackgroundService.ProcessingTasksActive)
             { // start processing pipeline
-                _TimedBackgroundService.StartProcessingPipeline();
+                TimedBackgroundService.StartProcessingPipeline();
             }
 
             return new PipelineStatus() { Status = StatusDetail.TaskWasAddedToPipeline, GlobalId = guid, NumberOfRequests = numberTasks };
         }
-
     }
 }
+
