@@ -18,7 +18,7 @@ namespace IOTAGears.Services
         private readonly Logger<TimedBackgroundService> _logger;
         private readonly NodeManager _nodemanager;
         private readonly DbStorageManager _db;
-        private Timer _timerHealthCheck;
+        private Timer _timerHealthCheck = null;
         private Timer _timerPipelineTasks = null;
         private bool HealthCheckingInProgress = false;
         private bool ProcessingTasksInProgress = false;
