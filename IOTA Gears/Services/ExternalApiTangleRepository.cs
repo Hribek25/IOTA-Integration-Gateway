@@ -27,6 +27,7 @@ namespace IOTAGears.Services
 
         public RestIotaRepository IotaRepository { get; private set; }
         public string ActualNodeServer { get; private set; }
+        private int NumberOfTrials { get; set; } = 3; // How many times will I try to perform an API call?
 
         public ExternalApiTangleRepository(ILogger<ExternalApiTangleRepository> logger, INodeManager nodemanager)
         {
@@ -39,22 +40,49 @@ namespace IOTAGears.Services
         private void InitNodeIotaRepository()
         {
             var node = NodeManager.SelectNode();
-            ActualNodeServer = node ?? throw new Exception("There is not a NODE to deal with...");
-            IotaRepository = new RestIotaRepository(new RestClient(node) { Timeout = 7000 });
+            ActualNodeServer = node; //?? throw new Exception("There is not a NODE to deal with...");
+
+            if (ActualNodeServer is null)
+            {
+                IotaRepository = null;
+            }
+            else
+            {
+                IotaRepository = new RestIotaRepository(new RestClient(node) { Timeout = 7000 });
+            }            
         }
 
-        internal async Task<NodeInfo> GetNodeInfoAsync()
+        internal async Task<NodeInfo> GetNodeInfoAsync(int counter = 0)
         {
             NodeInfo res;
+            if (counter>0) // another trial and so trying to switch the node
+            {
+                try
+                {
+                    InitNodeIotaRepository();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }                
+            }
             Logger.LogInformation("Performing external API call GetNodeInfo... via node {ActualNodeServer}", ActualNodeServer);
+
             try
             {
                 res = await IotaRepository.GetNodeInfoAsync();
             }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter>NumberOfTrials)
+                {
+                    throw;
+                }
+                else
+                {
+                    return await GetNodeInfoAsync(++counter); // Performing another call but incrementing counter
+                }
             }
             Logger.LogInformation("External API call... Finished.");
             return res;
