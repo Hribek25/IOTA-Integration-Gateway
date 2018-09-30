@@ -41,10 +41,10 @@ namespace IOTAGears
             services.AddSingleton<IFsStorageManager, FsStorageManager>();
 
             // External Tangle Repo
-            services.AddTransient<IExternalApiTangleRepository, ExternalApiTangleRepository>();
+            services.AddScoped<IExternalApiTangleRepository, ExternalApiTangleRepository>();
 
             // Tangle Repo
-            services.AddTransient<ITangleRepository, TangleRepository>();
+            services.AddScoped<ITangleRepository, TangleRepository>();
 
             // Register the Swagger generator
             services.AddSwaggerGen(c =>
