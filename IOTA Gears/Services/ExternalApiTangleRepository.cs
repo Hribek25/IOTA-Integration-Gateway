@@ -15,14 +15,14 @@ namespace IOTAGears.Services
 {
     public interface IExternalApiTangleRepository
     {
-        NodeManager NodeManager { get; }        
+        NodeManager NodeManager { get; }
         Logger<ExternalApiTangleRepository> Logger { get; }
         RestIotaRepository IotaRepository { get; }
     }
 
     public class ExternalApiTangleRepository : IExternalApiTangleRepository
-    {        
-        public NodeManager NodeManager { get; }        
+    {
+        public NodeManager NodeManager { get; }
         public Logger<ExternalApiTangleRepository> Logger { get; }
 
         public RestIotaRepository IotaRepository { get; private set; }
@@ -33,14 +33,14 @@ namespace IOTAGears.Services
         {
             NodeManager = (NodeManager)nodemanager;
             Logger = (Logger<ExternalApiTangleRepository>)logger;
-            InitNodeIotaRepository();            
+            InitNodeIotaRepository();
             Logger.LogInformation("{nameof(ExternalApiTangleRepository)} initiated... selected node: {node}", nameof(ExternalApiTangleRepository), ActualNodeServer);
         }
 
         private void InitNodeIotaRepository()
         {
             var node = NodeManager.SelectNode();
-            ActualNodeServer = node; //?? throw new Exception("There is not a NODE to deal with...");
+            ActualNodeServer = node;
 
             if (ActualNodeServer is null)
             {
@@ -48,23 +48,16 @@ namespace IOTAGears.Services
             }
             else
             {
-                IotaRepository = new RestIotaRepository(new RestClient(node) { Timeout = 7000 });
-            }            
+                IotaRepository = new RestIotaRepository(new RestClient(node) { Timeout = 5000 });
+            }
         }
 
         internal async Task<NodeInfo> GetNodeInfoAsync(int counter = 0)
         {
             NodeInfo res;
-            if (counter>0) // another trial and so trying to switch the node
+            if (counter > 0) // another trial and so trying to switch the node
             {
-                try
-                {
-                    InitNodeIotaRepository();
-                }
-                catch (Exception)
-                {
-                    throw;
-                }                
+                InitNodeIotaRepository();
             }
             Logger.LogInformation("Performing external API call GetNodeInfo... via node {ActualNodeServer}", ActualNodeServer);
 
@@ -72,10 +65,11 @@ namespace IOTAGears.Services
             {
                 res = await IotaRepository.GetNodeInfoAsync();
             }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); } // if there is no IotaRepository due to lack of available nodes
             catch (Exception e)
             {
                 Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
-                if (counter>NumberOfTrials)
+                if (counter >= NumberOfTrials) // if too many trials
                 {
                     throw;
                 }
@@ -88,112 +82,188 @@ namespace IOTAGears.Services
             return res;
         }
 
-        internal async Task<InclusionStates> GetLatestInclusionAsync(List<Hash> list)
+        internal async Task<InclusionStates> GetLatestInclusionAsync(List<Hash> list, int counter = 0)
         {
             InclusionStates res;
+            if (counter > 0) // another trial and so trying to switch the node
+            {
+                InitNodeIotaRepository();
+            }
+
             Logger.LogInformation("Performing external API call GetLatestInclusionStates for {hashes.Count} hashes... via node {ActualNodeServer}", list.Count, ActualNodeServer);
 
             try
-            {                
-                res = await IotaRepository.GetLatestInclusionAsync(list);                
+            {
+                res = await IotaRepository.GetLatestInclusionAsync(list);
             }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
+                {
+                    throw;
+                }
+                else
+                {
+                    return await GetLatestInclusionAsync(list, ++counter); // Performing another call but incrementing counter
+                }
             }
 
             Logger.LogInformation("External API call... Finished. Retuned {res.States.Count} states.", res.States.Count);
             return res;
         }
 
-        internal async Task<TransactionHashList> FindTransactionsByBundlesAsync(List<Hash> list)
+        internal async Task<TransactionHashList> FindTransactionsByBundlesAsync(List<Hash> list, int counter = 0)
         {
             TransactionHashList res;
-            Logger.LogInformation("Performing external API call FindTransactionsByBundles for a single address... via node {ActualNodeServer}", ActualNodeServer);
-            try
-            {                
-                res = await IotaRepository.FindTransactionsByBundlesAsync(list);                
+            if (counter > 0)
+            {
+                InitNodeIotaRepository();
             }
+            Logger.LogInformation("Performing external API call FindTransactionsByBundles for a single address... via node {ActualNodeServer}", ActualNodeServer);
+
+            try
+            {
+                res = await IotaRepository.FindTransactionsByBundlesAsync(list);
+            }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
+                {
+                    throw;
+                }
+                else
+                {
+                    return await FindTransactionsByBundlesAsync(list, ++counter); // Performing another call but incrementing counter
+                }
             }
             Logger.LogInformation("External API call... Finished. Retuned {res.Hashes.Count} hashes.", res.Hashes.Count);
             return res;
         }
 
-        internal async Task<TransactionHashList> FindTransactionsByAddressesAsync(List<Address> list)
+        internal async Task<TransactionHashList> FindTransactionsByAddressesAsync(List<Address> list, int counter = 0)
         {
             TransactionHashList res;
+            if (counter > 0)
+            {
+                InitNodeIotaRepository();
+            }
+
             Logger.LogInformation("Performing external API call FindTransactionsByAddresses for a single address... via node {ActualNodeServer}", ActualNodeServer);
             try
             {
-                
+
                 res = await IotaRepository.FindTransactionsByAddressesAsync(list);
             }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
+                {
+                    throw;
+                }
+                else
+                {
+                    return await FindTransactionsByAddressesAsync(list, ++counter); // Performing another call but incrementing counter
+                }
             }
             Logger.LogInformation("External API call... Finished. Retuned {res.Hashes.Count} hashes.", res.Hashes.Count);
             return res;
         }
 
-        internal async Task<List<TransactionTrytes>> GetTrytesAsync(List<Hash> list)
+        internal async Task<List<TransactionTrytes>> GetTrytesAsync(List<Hash> list, int counter = 0)
         {
             List<TransactionTrytes> trnTrytes;
+            if (counter > 0)
+            {
+                InitNodeIotaRepository();
+            }
+
             Logger.LogInformation("Performing external API calls GetTrytes for {list.Count} transactions... via node {ActualNodeServer}", list.Count, ActualNodeServer);
             try
-            {                
+            {
                 trnTrytes = await IotaRepository.GetTrytesAsync(list); // get info about TXs
-                
+
             }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
+                {
+                    throw;
+                }
+                else
+                {
+                    return await GetTrytesAsync(list, ++counter); // Performing another call but incrementing counter
+                }
             }
             Logger.LogInformation("External API call... Finished. Returned {trnTrytes.Count} trytes.", trnTrytes.Count);
             return trnTrytes;
         }
 
-        internal async Task<AddressWithBalances> GetBalancesAsync(List<Address> list)
+        internal async Task<AddressWithBalances> GetBalancesAsync(List<Address> list, int counter = 0)
         {
             AddressWithBalances res;
+            if (counter > 0)
+            {
+                InitNodeIotaRepository();
+            }
+
             Logger.LogInformation("Performing external API call GetBalances for a single address... via node {ActualNodeServer}", ActualNodeServer);
             try
             {
-                
-                res = await IotaRepository.GetBalancesAsync(list);                
+                res = await IotaRepository.GetBalancesAsync(list);
             }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
             catch (Exception e)
             {
-                Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
-                throw;
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
+                {
+                    throw;
+                }
+                else
+                {
+                    return await GetBalancesAsync(list, ++counter); // Performing another call but incrementing counter
+                }
             }
             Logger.LogInformation("External API call... Finished");
             return res;
         }
 
-        internal async Task<Bundle> GetBundleAsync(Hash hash)
+        internal async Task<Bundle> GetBundleAsync(Hash hash, int counter = 0)
         {
             Bundle res;
-            Logger.LogInformation("Performing external API call GetBundleByTransaction for a single hash... via node {ActualNodeServer}", ActualNodeServer);
+            if (counter > 0)
+            {
+                InitNodeIotaRepository();
+            }
 
+            Logger.LogInformation("Performing external API call GetBundleByBundleHash for a single hash... via node {ActualNodeServer}", ActualNodeServer);
             try
             {
-                    res = await IotaRepository.GetBundleAsync(hash);                    
-                }
-                catch (Exception e)
+                res = await IotaRepository.GetBundleAsync(hash);
+            }
+            catch (NullReferenceException) { throw new Exception("No available nodes to perform the call"); }
+            catch (Exception e)
+            {
+                Logger.LogError("External API call... Failed. Tried {counter} times so far. Error: {e.Message}, Inner Error: {e.InnerException.Message}", counter, e.Message, e.InnerException?.Message);
+                if (counter >= NumberOfTrials) // if too many trials
                 {
-                    Logger.LogError("External API call... Failed. Error: {e.Message}, Inner Error: {e.InnerException.Message}", e.Message, e.InnerException?.Message);
                     throw;
                 }
+                else
+                {
+                    return await GetBundleAsync(hash, ++counter); // Performing another call but incrementing counter
+                }
+            }
             Logger.LogInformation("External API call... Finished");
             return res;
-        }        
+        }
     }
 }
