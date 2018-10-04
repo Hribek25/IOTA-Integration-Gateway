@@ -46,7 +46,7 @@ namespace IOTAGears
             var DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
             var DbConnStr = conf.GetValue<string>("SqlDbConnStr"); 
 
-            if (DbLayer.IsDBLayerReady(DbConnStr, DbProvider))
+            if (StorageLayerPreps.IsDBLayerReady(DbConnStr, DbProvider))
             {
                 Console.WriteLine("DB layer is ready. Program/Main executes...");
                 wh.Run();                

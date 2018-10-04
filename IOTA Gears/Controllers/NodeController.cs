@@ -27,7 +27,7 @@ namespace IOTAGears.Controllers
         }
         //CTOR
         
-        // GET api/node/getnodeinfo
+        
         /// <summary>
         /// Basic summary of an IOTA node and its status 
         /// </summary>
@@ -47,13 +47,39 @@ namespace IOTAGears.Controllers
             NodeInfo res;
             try
             {
-                res = await _repository.Api.GetNodeInfoAsync();
+                res = await _repository.GetNodeInfoAsync();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Error occured in " + nameof(GetNodeInfo));
                 return StatusCode(504); // return 404 error
             }            
+            return Json(res); // Format the output
+        }
+
+                
+        /// <summary>
+        /// Milestone index based on the pool of IOTA nodes the given gateway partners with
+        /// </summary>
+        /// <remarks>The milestone index is based on the index that is gotten during the health check procedure which is performed independently every 2 minutes</remarks>
+        /// <returns>Milestone index</returns>
+        /// <response code="504">Result is not available at the moment</response>    
+        [HttpGet("[action]")]
+        [Produces("application/json")]
+        [ProducesResponseType((int)HttpStatusCode.GatewayTimeout)]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        public IActionResult GetLatestMilestoneIndex()
+        {
+            int res;
+            try
+            {
+                res = _repository.GetLatestMilestoneIndex();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error occured in " + nameof(GetLatestMilestoneIndex));
+                return StatusCode(504); // return 404 error
+            }
             return Json(res); // Format the output
         }
     }

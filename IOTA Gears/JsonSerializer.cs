@@ -21,7 +21,7 @@ namespace IOTAGears
             return objectType == typeof(Address);
         }
 
-        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             
             // Load the JSON for the Result into a JObject
@@ -59,7 +59,7 @@ namespace IOTAGears
             get { return true; }
         }
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
@@ -71,7 +71,7 @@ namespace IOTAGears
             return objectType == typeof(TryteString);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
@@ -98,7 +98,7 @@ namespace IOTAGears
             get { return true; }
         }
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
@@ -110,7 +110,7 @@ namespace IOTAGears
             return (objectType == typeof(Hash));
         }
 
-        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override Object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
             
@@ -137,7 +137,7 @@ namespace IOTAGears
             get { return true; }
         }
         
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
@@ -149,7 +149,7 @@ namespace IOTAGears
             return objectType == typeof(Fragment);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             
             // Load the JSON for the Result into a JObject
@@ -177,7 +177,7 @@ namespace IOTAGears
             get { return true; }
         }
                 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
@@ -189,7 +189,7 @@ namespace IOTAGears
             return objectType == typeof(Tag);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             // Load the JSON for the Result into a JObject
             JObject jo = JObject.Load(reader);
@@ -216,7 +216,7 @@ namespace IOTAGears
             get { return true; }
         }
       
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
@@ -238,7 +238,7 @@ namespace IOTAGears
 
     #endregion
 
-    public static class DBSerializer
+    public static class JsonSerializer
     {
         public static string SerializeToJson(object input)
         {

@@ -17,22 +17,22 @@ namespace IOTAGears.Services
     {
         private readonly Logger<TimedBackgroundService> _logger;
         private readonly NodeManager _nodemanager;
-        private readonly DBManager _db;
-        private Timer _timerHealthCheck;
+        private readonly DbStorageManager _db;
+        private Timer _timerHealthCheck = null;
         private Timer _timerPipelineTasks = null;
         private bool HealthCheckingInProgress = false;
         private bool ProcessingTasksInProgress = false;
         public bool ProcessingTasksActive { get; set; } = false;
-        private readonly TimeSpan ProcessingTaskInterval = TimeSpan.FromSeconds(6); // task is processed every 6 seconds
-        private readonly TimeSpan HealthCheckingTaskInterval = TimeSpan.FromSeconds(180);
+        private readonly TimeSpan ProcessingTaskInterval = TimeSpan.FromSeconds(10); // task is processed every 10 seconds
+        private readonly TimeSpan HealthCheckingTaskInterval = TimeSpan.FromSeconds(120); // health check is perfomed every 2 minutes
         private readonly object balanceLock = new object();
         private bool disposed = false;
 
-        public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDBManager dbmanager)
+        public TimedBackgroundService(ILogger<TimedBackgroundService> logger, INodeManager nodemanager, IDbStorageManager dbmanager)
         {
             _logger = (Logger<TimedBackgroundService>)logger;
             _nodemanager = (NodeManager)nodemanager;
-            _db = (DBManager)dbmanager;
+            _db = (DbStorageManager)dbmanager;
             _logger.LogInformation("Background Service initialized.");
         }
 

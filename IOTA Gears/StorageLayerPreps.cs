@@ -8,7 +8,7 @@ using MySql.Data.MySqlClient;
 
 namespace IOTAGears
 {
-    public static class DbLayer
+    public static class StorageLayerPreps
     {
         private static bool IsValidDBLayer(DbConnection connection)
         {
