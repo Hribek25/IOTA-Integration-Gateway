@@ -140,7 +140,7 @@
                         <div class="card text-white bg-info mb-3 " style="max-width: 20rem;">
                             <div class="card-header">Public Endpoint {REST} API (Beta)</div>
                             <div class="card-body">
-                                <h4 class="card-title">Status: <span class="text-hide" id="online">Online</span> <span class="text-hide" id="offline">Offline <i class="far fa-frown"></i></span> <i class="fas fa-spinner fa-spin" id="spinner"></i></h4>
+                                <h4 class="card-title">Status: <span class="text-hide" id="online">Online<small id="version" class="small">&nbsp;</small></span> <span class="text-hide" id="offline">Offline <i class="far fa-frown"></i></span> <i class="fas fa-spinner fa-spin" id="spinner"></i></h4>
                                 <p class="card-text">https://api.iogateway.cloud:443</p>
                                 <p class="card-text">API explorer and documentation <a href="https://api.iogateway.cloud/docs" class="text-white" style="text-decoration:underline;">available</a>.</p>
                             </div>
@@ -381,9 +381,10 @@ in
     <script>
         $(document).ready(function () {
             $.ajax("https://api.iogateway.cloud/api/Core/status")
-                .done(function () {
+                .done(function (data) {
+                    $("#version").html(" (v" + data["version"].substr(0, data["version"].length-2) + ")");
                     $("#online").removeClass("text-hide");
-                    $("#spinner").removeClass("fa-spin").addClass("text-hide");
+                    $("#spinner").removeClass("fa-spin").addClass("text-hide");                    
                 })
                 .fail(function () {
                     $("#offline").removeClass("text-hide");
@@ -391,7 +392,6 @@ in
                     console.log("Ajax failed!");
                 });
         });
-
     </script>
 </body>
 </html>
