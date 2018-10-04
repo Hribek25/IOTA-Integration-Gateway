@@ -20,6 +20,7 @@ namespace IOTAGears.Services
         public List<string> StartupNodes { get; }
         public List<string> POWStartupNodes { get; }
         public List<string> POWNodes { get; set; }
+        public int LatestMilestone { get; private set; } = -1;
 
 #pragma warning restore CA2227 // Collection properties should be read only
 
@@ -75,15 +76,11 @@ namespace IOTAGears.Services
             }            
             return stats;
         }
-
-
+        
         public Dictionary<string, bool> PerformHealthCheck()
         {
             // health check of general purpose nodes
-            if (Logger != null)
-            {
-                Logger.LogInformation("Performing health check of NODES...");
-            }
+            Logger.LogInformation("Performing health check of NODES...");            
 
             var stats = new Dictionary<string, Tangle.Net.Repository.DataTransfer.NodeInfo>();
             foreach (var node in this.StartupNodes) // always starts with all original nodes
@@ -128,6 +125,14 @@ namespace IOTAGears.Services
                         Logger.LogInformation("{node.Key} is in bad condition!", node.Key);
                     }
                 }
+            }
+            if (this.LatestMilestone>=maxMilestoneIndex)
+            {
+                Logger.LogError("Milestone index is not moving!");
+            }
+            else
+            {
+                this.LatestMilestone = maxMilestoneIndex; //update latest milestone index
             }
             
             return res;

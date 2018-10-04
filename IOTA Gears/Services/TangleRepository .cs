@@ -53,6 +53,8 @@ namespace IOTAGears.Services
             return res;
         }
 
+        public int GetLatestMilestoneIndex() => this.Repo.NodeManager.LatestMilestone;       
+
         private async Task<HashSet<string>> GetLatestInclusionStates(string hash, HashSet<string> hashes) // non-public function
         {
             if (hashes.Count == 0) { return null; }
