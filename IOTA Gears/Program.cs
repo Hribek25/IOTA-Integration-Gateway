@@ -58,7 +58,7 @@ namespace IOTAGears
                 Console.ReadKey();
             }
 
-            Console.WriteLine("Program has been terminated...");
+            Console.WriteLine("Program has been terminated...");            
         }
 
         public static IWebHost BuildWebHost(string[] args) =>
