@@ -4,7 +4,11 @@
 Official project page is available at [http://iogateway.cloud/](http://iogateway.cloud/ "Project page")
 
 ## Change Log
-Version 0.9.2.0 (latest stable)
+Version 0.9.2.1 (latest stable)
+* asp dotnet core packages upgraded: security fixes
+Please kindly update dotnet core runtime before a deployment
+
+Version 0.9.2.0 
 * Code refactoring: Layer responsible for external API calls was added
 * Layer for external API calls: added a new failover logic that repeats an external API call if fails
 * Added new API call: Node/GetLatestMilestoneIndex
