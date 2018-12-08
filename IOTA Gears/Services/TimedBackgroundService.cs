@@ -80,7 +80,7 @@ namespace IOTAGears.Services
 
                         if (actualnode != null && actualPOWnode !=null)
                         {
-                            var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 5000 }, new POWService(actualPOWnode));
+                            var IotaRepo = new RestIotaRepository(new RestClient(actualnode) { Timeout = 15000 }, new POWService(actualPOWnode));
                             var bundle = new Bundle();
                             Bundle RetBundle = null;
                             var guid = item.GlobalId;                            
@@ -106,7 +106,7 @@ namespace IOTAGears.Services
                             try
                             {
                                 _logger.LogInformation("Performing external API call SendTransfer via {actualnode}", actualnode);
-                                RetBundle = IotaRepo.SendTransfer(seed, bundle, 2);
+                                RetBundle = IotaRepo.SendTransfer(seed, bundle, 2, depth:3);
                                 _logger.LogInformation("Background Task: Processing Tasks... Transaction sent, Bundle Hash: {RetBundle.Hash.Value}", RetBundle.Hash.Value);
                             }
                             catch (Exception e)
