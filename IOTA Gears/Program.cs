@@ -42,13 +42,14 @@ namespace IOTAGears
             var wh = BuildWebHost(args); // preparing web host + service container
 
             // Read a configuration before runnning webhost
-            var conf = (IConfiguration)wh.Services.GetService(typeof(IConfiguration));            
+            var conf = (IConfiguration)wh.Services.GetService(typeof(IConfiguration));
             var DbProvider = conf.GetValue<DbLayerProvider>("DBLayerProvider");
             var DbConnStr = conf.GetValue<string>("SqlDbConnStr"); 
 
             if (StorageLayerPreps.IsDBLayerReady(DbConnStr, DbProvider))
             {
                 Console.WriteLine("DB layer is ready. Program/Main executes...");
+                Console.WriteLine($"Using: {DbProvider}");
                 wh.Run();                
             }
             else
@@ -58,7 +59,7 @@ namespace IOTAGears
                 Console.ReadKey();
             }
 
-            Console.WriteLine("Program has been terminated...");            
+            Console.WriteLine("Program has been terminated...");
         }
 
         public static IWebHost BuildWebHost(string[] args) =>
