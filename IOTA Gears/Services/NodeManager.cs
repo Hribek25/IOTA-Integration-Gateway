@@ -97,7 +97,7 @@ namespace IOTAGears.Services
                 catch (Exception e)
                 {
                     ninfo = null;
-                    Logger.LogInformation("Error while checking {node}. Error: {e.Message} Inner Exception: {e.InnerException.Message}", node, e.Message, e.InnerException.Message);
+                    Logger.LogInformation("Error while checking {node}. Error: {e.Message} Inner Exception: {e.InnerException?.Message}", node, e.Message, e.InnerException?.Message);
                 }               
 
                 stats.Add(node, ninfo);                
